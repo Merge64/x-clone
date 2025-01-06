@@ -13,6 +13,6 @@ FROM scratch
 
 WORKDIR /root/
 
-COPY --from=builder /app/rpl-service .
+COPY --from=builder /app/x-clone .
 
-CMD ["./rpl-service"]
+CMD ["./x-clone"]

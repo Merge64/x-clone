@@ -47,8 +47,30 @@ func UnfollowAccount(db *gorm.DB, followingUserId, followedUserId int) error {
 	return nil
 }
 
+// currentModel can only be either 'Post_liked' or 'Comment_liked'.
+func ToggleLike(db *gorm.DB, userID, postID int, currentModel any) error {
+	var currentUser models.Post_likes
+
+	if isLiked(db, userID, postID, currentUser) {
+		db.Model(currentModel).Delete(&currentUser)
+	} else {
+		db.Model(currentModel).Create(models.Post_likes{
+			Model:   gorm.Model{},
+			Post_id: postID,
+			User_id: userID,
+		})
+	}
+
+	return nil
+}
+
 // AUX
+
 func alreadyFollows(db *gorm.DB, followingUserId, followedUserId int) bool {
 	var user models.Follows
 	return db.Model(models.Follows{}).First(&user, "Following_user_id = ? AND Followed_user_id = ?", followingUserId, followedUserId).Error != nil
+}
+
+func isLiked(db *gorm.DB, userID, postID int, currentUser models.Post_likes) bool {
+	return db.Model(models.Post_likes{}).Where("User_id = ? AND Post_id = ?", userID, postID).First(&currentUser).Error != nil
 }

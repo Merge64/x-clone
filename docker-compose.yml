@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    container_name: x-clone
+    container_name: rpl-service
     build:
       context: .
       dockerfile: Dockerfile
@@ -14,7 +14,7 @@ services:
       - db
 
   db:
-    container_name: x-db
+    container_name: rpl-db
     image: postgres:latest
     env_file:
       - .env

@@ -1,0 +1,51 @@
+name: CD Workflow
+# TODO: Make the binary for the workflow to compile correctly
+on:
+  push:
+    branches: ["main", "dev"]
+  release:
+    types: [created]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      pages: write
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Set binary name
+        id: set-binary-name
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "BINARY_NAME=rpl-service" >> $GITHUB_ENV
+          else
+            echo "BINARY_NAME=rpl-service-dev" >> $GITHUB_ENV
+          fi
+        shell: /usr/bin/bash -e {0}
+
+      - name: Build binary
+        run: go build -o ${{ env.BINARY_NAME }} ./main/main.go
+
+      - name: Upload Go artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}
+          path: ${{ env.BINARY_NAME }}
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifact_name: ${{ env.BINARY_NAME }}

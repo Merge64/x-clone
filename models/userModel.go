@@ -12,6 +12,6 @@ type User struct {
 
 type Follows struct {
 	gorm.Model
-	Following_user_id int
-	Followed_user_id  int
+	FollowingUserID int
+	FollowedUserID  int
 }

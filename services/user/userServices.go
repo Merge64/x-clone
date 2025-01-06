@@ -30,9 +30,9 @@ func FollowAccount(db *gorm.DB, followingUserId, followedUserId int) error {
 	}
 
 	db.Model(models.Follows{}).Create(models.Follows{
-		Model:             gorm.Model{},
-		Following_user_id: followingUserId,
-		Followed_user_id:  followedUserId,
+		Model:           gorm.Model{},
+		FollowingUserID: followingUserId,
+		FollowedUserID:  followedUserId,
 	})
 	return nil
 }
@@ -42,22 +42,22 @@ func UnfollowAccount(db *gorm.DB, followingUserId, followedUserId int) error {
 		return errors.New("invalid Id")
 	}
 	var user models.Follows
-	db.Model(models.Follows{}).First(&user, "Following_user_id = ? AND Followed_user_id = ?", followingUserId, followedUserId)
+	db.Model(models.Follows{}).First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserId, followedUserId)
 	db.Model(models.Follows{}).Delete(&user)
 	return nil
 }
 
 // currentModel can only be either 'Post_liked' or 'Comment_liked'.
 func ToggleLike(db *gorm.DB, userID, postID int, currentModel any) error {
-	var currentUser models.Post_likes
+	var currentUser models.PostLikes
 
 	if isLiked(db, userID, postID, currentUser) {
 		db.Model(currentModel).Delete(&currentUser)
 	} else {
-		db.Model(currentModel).Create(models.Post_likes{
-			Model:   gorm.Model{},
-			Post_id: postID,
-			User_id: userID,
+		db.Model(currentModel).Create(models.PostLikes{
+			Model:  gorm.Model{},
+			PostID: postID,
+			UserID: userID,
 		})
 	}
 
@@ -68,9 +68,9 @@ func ToggleLike(db *gorm.DB, userID, postID int, currentModel any) error {
 
 func alreadyFollows(db *gorm.DB, followingUserId, followedUserId int) bool {
 	var user models.Follows
-	return db.Model(models.Follows{}).First(&user, "Following_user_id = ? AND Followed_user_id = ?", followingUserId, followedUserId).Error != nil
+	return db.Model(models.Follows{}).First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserId, followedUserId).Error != nil
 }
 
-func isLiked(db *gorm.DB, userID, postID int, currentUser models.Post_likes) bool {
-	return db.Model(models.Post_likes{}).Where("User_id = ? AND Post_id = ?", userID, postID).First(&currentUser).Error != nil
+func isLiked(db *gorm.DB, userID, postID int, currentUser models.PostLikes) bool {
+	return db.Model(models.PostLikes{}).Where("UserID = ? AND PostID = ?", userID, postID).First(&currentUser).Error != nil
 }

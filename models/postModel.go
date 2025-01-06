@@ -4,32 +4,32 @@ import "gorm.io/gorm"
 
 type Post struct {
 	gorm.Model
-	User_id int
-	Title   string
-	Body    string
-	Likes   int
+	UserID int
+	Title  string
+	Body   string
+	Likes  int
 }
 
-type Post_likes struct {
+type PostLikes struct {
 	gorm.Model
-	Post_id int // id del post (gorm)
-	User_id int
+	PostID int // id del post (gorm)
+	UserID int
 }
 
-type Post_comment struct {
+type PostComment struct {
 	gorm.Model
-	Post_id      int // id del post (gorm)
-	User_id      int
-	Comment_body string
+	PostID      int // id del post (gorm)
+	UserID      int
+	CommentBody string
 }
-type Comment_comments struct {
+type CommentComments struct {
 	gorm.Model
-	Comment_id int
-	User_id    int
-	Body       string
+	CommentID int
+	UserID    int
+	Body      string
 }
-type Comment_likes struct {
+type CommentLikes struct {
 	gorm.Model
-	Comment_id int
-	User_id    int
+	CommentID int
+	UserID    int
 }

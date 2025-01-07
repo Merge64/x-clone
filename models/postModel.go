@@ -22,6 +22,7 @@ type PostComment struct {
 	UserID      uint
 	CommentBody string
 }
+
 type CommentComments struct {
 	gorm.Model
 	CommentID uint

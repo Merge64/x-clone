@@ -12,15 +12,17 @@ func CreateAccount(db *gorm.DB, username, password, mail string, location *strin
 		return models.User{}, errors.New("fields must not be empty")
 	}
 
-	db.Model(models.User{}).Create(models.User{
+	var currentUser = models.User{
 		Model:    gorm.Model{},
 		Username: username,
 		Mail:     mail,
 		Location: location,
 		Password: password,
-	})
+	}
 
-	return nil
+	db.Model(models.User{}).Create(&currentUser)
+
+	return currentUser, nil
 }
 
 func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {

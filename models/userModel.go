@@ -12,7 +12,7 @@ type User struct {
 	Password string
 }
 
-type Follows struct {
+type Follow struct {
 	gorm.Model
 	FollowingUserID uint
 	FollowedUserID  uint

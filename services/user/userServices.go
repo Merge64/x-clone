@@ -3,14 +3,13 @@ package user
 import (
 	"errors"
 	"gorm.io/gorm"
+	"main/constants"
 	"main/models"
 )
 
-const EMPTY = ""
-
-func CreateAccount(db *gorm.DB, username, password, mail string, location *string) error {
-	if password == EMPTY || username == EMPTY {
-		return errors.New("fields must not be empty")
+func CreateAccount(db *gorm.DB, username, password, mail string, location *string) (models.User, error) {
+	if password == constants.EMPTY || username == constants.EMPTY {
+		return models.User{}, errors.New("fields must not be empty")
 	}
 
 	db.Model(models.User{}).Create(models.User{
@@ -32,7 +31,7 @@ func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 		return errors.New("user already follows")
 	}
 
-	db.Model(models.Follows{}).Create(models.Follows{
+	db.Model(models.Follow{}).Create(models.Follow{
 		Model:           gorm.Model{},
 		FollowingUserID: followingUserID,
 		FollowedUserID:  followedUserID,
@@ -46,9 +45,9 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 		return errors.New("invalid Id")
 	}
 
-	var user models.Follows
-	db.Model(models.Follows{}).First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID)
-	db.Model(models.Follows{}).Delete(&user)
+	var user models.Follow
+	db.Model(models.Follow{}).First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID)
+	db.Model(models.Follow{}).Delete(&user)
 
 	return nil
 }
@@ -91,8 +90,8 @@ func CreatePost(db *gorm.DB, userID uint, parentID, quote *uint, body string) er
 
 // AUX.
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
-	return db.Model(models.Follows{}).
-		First(models.Follows{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
+	return db.Model(models.Follow{}).
+		First(models.Follow{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
 }
 
 func isLiked(db *gorm.DB, userID, parentID uint) bool {

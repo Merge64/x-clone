@@ -23,9 +23,9 @@ jobs:
         id: set-image-name
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "BINARY_NAME=rpl-service" >> $GITHUB_ENV
+            echo "BINARY_NAME=x-clone" >> $GITHUB_ENV
           else
-            echo "BINARY_NAME=rpl-service-dev" >> $GITHUB_ENV
+            echo "BINARY_NAME=x-clone-dev" >> $GITHUB_ENV
           fi
         shell: /usr/bin/bash -e {0}
 

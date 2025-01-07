@@ -98,7 +98,7 @@ func CreateComment(db *gorm.DB, userID uint, parentID uint, body string) error {
 	return nil
 }
 
-// AUX
+// AUX.
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	var user models.Follows
 	return db.Model(models.Follows{}).
@@ -106,7 +106,8 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 }
 
 func isLiked(db *gorm.DB, userID, parentID uint) bool {
-	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).First(&models.Like{}).Error == nil
+	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).
+		First(&models.Like{}).Error == nil
 }
 
 func userExists(db *gorm.DB, userID uint) bool {

@@ -21,7 +21,7 @@ func CreateAccount(db *gorm.DB, username, password string) error {
 	return nil
 }
 
-func FollowAccount(db *gorm.DB, followingUserID, followedUserID int) error {
+func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	if followingUserID == followedUserID {
 		return errors.New("invalid Id")
 	}
@@ -37,7 +37,7 @@ func FollowAccount(db *gorm.DB, followingUserID, followedUserID int) error {
 	return nil
 }
 
-func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID int) error {
+func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	if followingUserID == followedUserID {
 		return errors.New("invalid Id")
 	}
@@ -47,10 +47,12 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID int) error {
 	return nil
 }
 
-// currentModel can only be either 'Post_liked' or 'Comment_liked'.
-func ToggleLike(db *gorm.DB, userID, postID int, currentModel any) error {
+// currentModel can only be either 'PostLiked' or 'CommentLiked'.
+func ToggleLike(db *gorm.DB, userID uint, postID uint, currentModel any) error {
+	if !userExists(db, userID) {
+		return errors.New("user does not exist")
+	}
 	var currentUser models.PostLikes
-
 	if isLiked(db, userID, postID, currentUser) {
 		db.Model(currentModel).Delete(&currentUser)
 	} else {
@@ -64,14 +66,33 @@ func ToggleLike(db *gorm.DB, userID, postID int, currentModel any) error {
 	return nil
 }
 
-// AUX
+func CreatePost(db *gorm.DB, userID uint, title string, body string) error {
+	if !userExists(db, userID) {
+		return errors.New("user does not exist")
+	}
 
-func alreadyFollows(db *gorm.DB, followingUserID, followedUserID int) bool {
-	var user models.Follows
-	return db.Model(models.Follows{}).
-		First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error != nil
+	var currentPost models.Post
+	db.Model(currentPost).Create(models.Post{
+		Model:  gorm.Model{},
+		UserID: userID,
+		Title:  title,
+		Body:   body,
+		Likes:  0,
+	})
+	return nil
 }
 
-func isLiked(db *gorm.DB, userID, postID int, currentUser models.PostLikes) bool {
-	return db.Model(models.PostLikes{}).Where("UserID = ? AND PostID = ?", userID, postID).First(&currentUser).Error != nil
+// AUX
+func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
+	var user models.Follows
+	return db.Model(models.Follows{}).
+		First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
+}
+
+func isLiked(db *gorm.DB, userID, postID uint, currentUser models.PostLikes) bool {
+	return db.Model(models.PostLikes{}).Where("UserID = ? AND PostID = ?", userID, postID).First(&currentUser).Error == nil
+}
+
+func userExists(db *gorm.DB, userID uint) bool {
+	return db.Model(models.User{}).Where("UserID = ?", userID).First(models.User{}).Error == nil
 }

@@ -50,3 +50,4 @@ jobs:
           push: true
           tags: |
             ghcr.io/willytonkas/${{env.BINARY_NAME}}:latest
+

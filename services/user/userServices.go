@@ -82,7 +82,7 @@ func CreatePost(db *gorm.DB, userID uint, title string, body string) error {
 	return nil
 }
 
-// AUX
+// AUX.
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	var user models.Follows
 	return db.Model(models.Follows{}).

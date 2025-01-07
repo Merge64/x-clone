@@ -10,26 +10,15 @@ type Post struct {
 	Likes  uint
 }
 
-type PostLikes struct {
+type Like struct {
 	gorm.Model
-	PostID uint // id del post (gorm)
-	UserID uint
+	ParentID uint
+	UserID   uint
 }
 
-type PostComment struct {
+type Comment struct {
 	gorm.Model
-	PostID      uint // id del post (gorm)
-	UserID      uint
-	CommentBody string
-}
-type CommentComments struct {
-	gorm.Model
-	CommentID uint
-	UserID    uint
-	Body      string
-}
-type CommentLikes struct {
-	gorm.Model
-	CommentID uint
-	UserID    uint
+	ParentID uint
+	UserID   uint
+	Body     string
 }

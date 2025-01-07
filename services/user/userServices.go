@@ -47,21 +47,21 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-// currentModel can only be either 'PostLiked' or 'CommentLiked'.
-func ToggleLike(db *gorm.DB, userID uint, postID uint, currentModel any) error {
+func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
 	if !userExists(db, userID) {
 		return errors.New("user does not exist")
 	}
-	var currentUser models.PostLikes
-	if isLiked(db, userID, postID, currentUser) {
-		db.Model(currentModel).Delete(&currentUser)
-	} else {
-		db.Model(currentModel).Create(models.PostLikes{
-			Model:  gorm.Model{},
-			PostID: postID,
-			UserID: userID,
-		})
+
+	var currentUser models.Like
+	if isLiked(db, userID, parentID) {
+		db.Model(models.Like{}).Delete(&currentUser)
 	}
+
+	db.Model(models.Like{}).Create(models.Like{
+		Model:    gorm.Model{},
+		ParentID: parentID,
+		UserID:   userID,
+	})
 
 	return nil
 }
@@ -79,6 +79,22 @@ func CreatePost(db *gorm.DB, userID uint, title string, body string) error {
 		Body:   body,
 		Likes:  0,
 	})
+
+	return nil
+}
+
+func CreateComment(db *gorm.DB, userID uint, parentID uint, body string) error {
+	if !userExists(db, userID) {
+		return errors.New("user does not exist")
+	}
+
+	db.Model(models.Comment{}).Create(models.Comment{
+		Model:    gorm.Model{},
+		ParentID: parentID,
+		UserID:   userID,
+		Body:     body,
+	})
+
 	return nil
 }
 
@@ -89,8 +105,9 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 		First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
 }
 
-func isLiked(db *gorm.DB, userID, postID uint, currentUser models.PostLikes) bool {
-	return db.Model(models.PostLikes{}).Where("UserID = ? AND PostID = ?", userID, postID).First(&currentUser).Error == nil
+func isLiked(db *gorm.DB, userID, parentID uint) bool {
+	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).
+		First(&models.Like{}).Error == nil
 }
 
 func userExists(db *gorm.DB, userID uint) bool {

@@ -7,12 +7,12 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o x-clone ./main/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o rpl-service ./main/main.go
 
 FROM scratch
 
 WORKDIR /root/
 
-COPY --from=builder /app/x-clone .
+COPY --from=builder /app/rpl-service .
 
-CMD ["./x-clone"]
+CMD ["./rpl-service"]

@@ -6,13 +6,13 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string
-	Mail     string
-	Location *string
-	Password string
+	Username string  `json:"username"`
+	Mail     string  `json:"mail"`
+	Location *string `json:"location"`
+	Password string  `json:"password"`
 }
 
-type Follows struct {
+type Follow struct {
 	gorm.Model
 	FollowingUserID uint
 	FollowedUserID  uint

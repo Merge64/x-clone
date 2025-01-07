@@ -8,7 +8,7 @@ import (
 
 const EMPTY = ""
 
-func CreateAccount(db *gorm.DB, username, password string) error {
+func CreateAccount(db *gorm.DB, username, password, mail string, location *string) error {
 	if password == EMPTY || username == EMPTY {
 		return errors.New("fields must not be empty")
 	}
@@ -16,8 +16,11 @@ func CreateAccount(db *gorm.DB, username, password string) error {
 	db.Model(models.User{}).Create(models.User{
 		Model:    gorm.Model{},
 		Username: username,
+		Mail:     mail,
+		Location: location,
 		Password: password,
 	})
+
 	return nil
 }
 
@@ -34,6 +37,7 @@ func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 		FollowingUserID: followingUserID,
 		FollowedUserID:  followedUserID,
 	})
+
 	return nil
 }
 
@@ -41,9 +45,11 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	if followingUserID == followedUserID {
 		return errors.New("invalid Id")
 	}
+
 	var user models.Follows
 	db.Model(models.Follows{}).First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID)
 	db.Model(models.Follows{}).Delete(&user)
+
 	return nil
 }
 
@@ -54,44 +60,29 @@ func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
 
 	var currentUser models.Like
 	if isLiked(db, userID, parentID) {
+		db.Model(models.Like{}).First(&currentUser, "UserID = ? AND ParentID = ?", userID, parentID)
 		db.Model(models.Like{}).Delete(&currentUser)
+	} else {
+		db.Model(models.Like{}).Create(models.Like{
+			Model:    gorm.Model{},
+			ParentID: parentID,
+			UserID:   userID,
+		})
 	}
-
-	db.Model(models.Like{}).Create(models.Like{
-		Model:    gorm.Model{},
-		ParentID: parentID,
-		UserID:   userID,
-	})
 
 	return nil
 }
 
-func CreatePost(db *gorm.DB, userID uint, title string, body string) error {
+func CreatePost(db *gorm.DB, userID uint, parentID, quote *uint, body string) error {
 	if !userExists(db, userID) {
 		return errors.New("user does not exist")
 	}
 
-	var currentPost models.Post
-	db.Model(currentPost).Create(models.Post{
-		Model:  gorm.Model{},
-		UserID: userID,
-		Title:  title,
-		Body:   body,
-		Likes:  0,
-	})
-
-	return nil
-}
-
-func CreateComment(db *gorm.DB, userID uint, parentID uint, body string) error {
-	if !userExists(db, userID) {
-		return errors.New("user does not exist")
-	}
-
-	db.Model(models.Comment{}).Create(models.Comment{
+	db.Model(models.Post{}).Create(models.Post{
 		Model:    gorm.Model{},
-		ParentID: parentID,
 		UserID:   userID,
+		ParentID: parentID,
+		Quote:    quote,
 		Body:     body,
 	})
 
@@ -100,9 +91,8 @@ func CreateComment(db *gorm.DB, userID uint, parentID uint, body string) error {
 
 // AUX.
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
-	var user models.Follows
 	return db.Model(models.Follows{}).
-		First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
+		First(models.Follows{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
 }
 
 func isLiked(db *gorm.DB, userID, parentID uint) bool {

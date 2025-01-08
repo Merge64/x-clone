@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"gorm.io/gorm"
+	"log"
 	"main/constants"
 	"main/models"
 	"regexp"
@@ -92,21 +93,53 @@ func CreatePost(db *gorm.DB, userID uint, parentID, quote *uint, body string) er
 }
 
 func MailAlreadyUsed(db *gorm.DB, mail string) bool {
-	return db.Model(models.User{}).Where("Mail = ?", mail).Error == nil
+	var user models.User
+	err := db.Where("Mail = ?", mail).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false
+
+	} else if err != nil {
+		log.Printf("Error querying user by email: %v", err)
+		return false
+
+	}
+	return true
 }
 
 func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
+	var user models.User
+
 	if IsEmail(inputUser) {
-		return db.Model(models.User{}).Where("Mail = ? AND Password = ?", inputUser, password).Error == nil
+		err := db.Where("Mail = ? AND Password = ?", inputUser, password).First(&user).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false
+
+		} else if err != nil {
+			log.Printf("Error querying user by email: %v", err)
+			return false
+
+		}
+	} else {
+		err := db.Where("Username = ? AND Password = ?", inputUser, password).First(&user).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false
+
+		} else if err != nil {
+			log.Printf("Error querying user by username: %v", err)
+			return false
+
+		}
 	}
-	return db.Model(models.User{}).Where("Username = ? AND Password = ?", inputUser, password).Error == nil
+
+	return true
 }
 
-// AUX.
 func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
 	return re.MatchString(email)
 }
+
+// AUX.
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return db.Model(models.Follow{}).

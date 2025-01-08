@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"main/constants"
 	"main/models"
+	"regexp"
 )
 
 func CreateAccount(db *gorm.DB, username, password, mail string, location *string) error {
@@ -94,7 +95,19 @@ func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	return db.Model(models.User{}).Where("Mail = ?", mail).Error == nil
 }
 
+func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
+	if IsEmail(inputUser) {
+		return db.Model(models.User{}).Where("Mail = ? AND Password = ?", inputUser, password).Error == nil
+	}
+	return db.Model(models.User{}).Where("Username = ? AND Password = ?", inputUser, password).Error == nil
+}
+
 // AUX.
+func IsEmail(email string) bool {
+	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
+	return re.MatchString(email)
+}
+
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return db.Model(models.Follow{}).
 		Where(models.Follow{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil

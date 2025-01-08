@@ -90,7 +90,7 @@ func UserLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 var UserSignUpEndPoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "user",
+	Path:            constants.BASEURL + "signup",
 	HandlerFunction: UserSignUp,
 }
 

@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"gorm.io/gorm"
+	"log"
 	"main/constants"
 	"main/models"
 	"main/services/user"
@@ -17,30 +18,25 @@ func CreateAccount(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	currentAccount, creatingAccountErr := user.CreateAccount(db, body.Username, body.Password, body.Mail, body.Location)
+	if user.MailAlreadyUsed(db, body.Mail) {
+		w.WriteHeader(http.StatusOK)
+		_, mailErr := w.Write([]byte("Email already in use"))
+		if mailErr != nil {
+			log.Printf("Failed to write response: %v", mailErr)
+		}
+		return
+	}
+
+	creatingAccountErr := user.CreateAccount(db, body.Username, body.Password, body.Mail, body.Location)
 	if creatingAccountErr != nil {
-		http.Error(w, "Invalid course ID format", http.StatusBadRequest)
+		http.Error(w, "Invalid parameters to create an account", http.StatusInternalServerError)
 		return
 	}
-
-	response, err := json.Marshal(currentAccount)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write(response)
-
-	if err != nil {
-		http.Error(w, "Failed to write response", http.StatusInternalServerError)
-		return
-	}
 }
 
 var CreateAccountEndPoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "/profiles/{Username}",
+	Path:            constants.BASEURL + "user",
 	HandlerFunction: CreateAccount,
 }

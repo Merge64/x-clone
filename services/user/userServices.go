@@ -7,9 +7,9 @@ import (
 	"main/models"
 )
 
-func CreateAccount(db *gorm.DB, username, password, mail string, location *string) (models.User, error) {
+func CreateAccount(db *gorm.DB, username, password, mail string, location *string) error {
 	if password == constants.EMPTY || username == constants.EMPTY {
-		return models.User{}, errors.New("fields must not be empty")
+		return errors.New("fields must not be empty")
 	}
 
 	var currentUser = models.User{
@@ -22,7 +22,7 @@ func CreateAccount(db *gorm.DB, username, password, mail string, location *strin
 
 	db.Model(models.User{}).Create(&currentUser)
 
-	return currentUser, nil
+	return nil
 }
 
 func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
@@ -90,15 +90,18 @@ func CreatePost(db *gorm.DB, userID uint, parentID, quote *uint, body string) er
 	return nil
 }
 
+func MailAlreadyUsed(db *gorm.DB, mail string) bool {
+	return db.Model(models.User{}).Where("Mail = ?", mail).Error == nil
+}
+
 // AUX.
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return db.Model(models.Follow{}).
-		First(models.Follow{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
+		Where(models.Follow{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
 }
 
 func isLiked(db *gorm.DB, userID, parentID uint) bool {
-	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).
-		First(&models.Like{}).Error == nil
+	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil
 }
 
 func userExists(db *gorm.DB, userID uint) bool {

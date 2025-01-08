@@ -63,6 +63,7 @@ func migrateSchemas(db *gorm.DB) {
 
 func startServer() {
 	db := startDatabase()
+
 	if db == nil {
 		fmt.Println("Error starting the database")
 		return
@@ -87,11 +88,11 @@ func startServer() {
 	})
 
 	serverPort := os.Getenv("SERVER_PORT")
-
 	if serverPort == constants.EMPTY {
 		log.Panic("serverPort environment variable is not set")
 	}
 
+	fmt.Printf("Server running on port %s", serverPort)
 	serverError = http.ListenAndServe(":"+serverPort, nil)
 	if serverError != nil {
 		return

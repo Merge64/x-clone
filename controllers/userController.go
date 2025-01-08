@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func CreateAccount(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -30,6 +30,15 @@ func CreateAccount(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	if !user.IsEmail(mail) {
+		w.WriteHeader(http.StatusOK)
+		_, mailErr := w.Write([]byte("Invalid email"))
+		if mailErr != nil {
+			log.Printf("Failed to write response: %v", mailErr)
+		}
+		return
+	}
+
 	if user.MailAlreadyUsed(db, mail) {
 		w.WriteHeader(http.StatusOK)
 		_, mailErr := w.Write([]byte("Email already in use"))
@@ -44,6 +53,7 @@ func CreateAccount(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		http.Error(w, "Invalid parameters to create an account", http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -78,14 +88,14 @@ func UserLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 }
 
-var CreateAccountEndPoint = models.Endpoint{
+var UserSignUpEndPoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "user",
-	HandlerFunction: CreateAccount,
+	HandlerFunction: UserSignUp,
 }
 
 var UserLoginEndPoint = models.Endpoint{
-	Method:          models.GET,
+	Method:          models.POST,
 	Path:            constants.BASEURL + "login",
 	HandlerFunction: UserLogin,
 }

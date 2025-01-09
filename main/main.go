@@ -91,8 +91,16 @@ func startServer() {
 		controllers.UserLoginEndPoint.HandlerFunction(writer, request, db)
 	})
 
-	http.HandleFunc(controllers.SearchEndPoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.SearchEndPoint.HandlerFunction(writer, request, db)
+	http.HandleFunc(controllers.SearchUserEndPoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.SearchUserEndPoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.SearchPostEndPoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.SearchPostEndPoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.CreatePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
 	})
 
 	serverPort := os.Getenv("SERVER_PORT")

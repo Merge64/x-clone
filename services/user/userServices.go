@@ -77,22 +77,6 @@ func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
 	return nil
 }
 
-func CreatePost(db *gorm.DB, userID uint, parentID, quote *uint, body string) error {
-	if !userExists(db, userID) {
-		return errors.New("user does not exist")
-	}
-
-	db.Model(models.Post{}).Create(models.Post{
-		Model:    gorm.Model{},
-		UserID:   userID,
-		ParentID: parentID,
-		Quote:    quote,
-		Body:     body,
-	})
-
-	return nil
-}
-
 func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	var user models.User
 	err := db.Where("Mail = ?", mail).First(&user).Error
@@ -162,6 +146,53 @@ func SearchUsersByUsername(db *gorm.DB, username string) ([]models.User, error) 
 	return users, nil
 }
 
+func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
+	var posts []models.Post
+	result := db.Where("Body ILIKE ?", "%"+keyword+"%").Find(&posts)
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("no posts found containing the keyword: %s", keyword)
+	}
+	return posts, nil
+}
+
+func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body string) error {
+	if !userExists(db, userID) {
+		return errors.New("user does not exist")
+	}
+	post := models.Post{
+		UserID:   userID,
+		ParentID: parentID,
+		Quote:    quoteID,
+		Body:     body,
+	}
+
+	if err := db.Create(&post).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+//func CreatePostComment(db *gorm.DB, userID uint, parentID, quote *uint, body string) error {
+//	if userID == 0 || body == constants.EMPTY {
+//		return errors.New("required fields must not be empty")
+//	}
+//	if !userExists(db, userID) {
+//		return errors.New("user does not exist")
+//	}
+//	var currentPost = models.Post{
+//		Model:    gorm.Model{},
+//		UserID:   userID,
+//		ParentID: parentID,
+//		Quote:    quote,
+//		Body:     body,
+//	}
+//	err := db.Model(models.Post{}).Create(&currentPost).Error
+//	if err != nil {
+//		return fmt.Errorf("failed to create post comment: %v", err)
+//	}
+//	return nil
+//}
+
 // AUX.
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
@@ -174,5 +205,13 @@ func isLiked(db *gorm.DB, userID, parentID uint) bool {
 }
 
 func userExists(db *gorm.DB, userID uint) bool {
-	return db.Model(models.User{}).Where("UserID = ?", userID).First(models.User{}).Error == nil
+	var user models.User
+	err := db.Where("id = ?", userID).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false
+	} else if err != nil {
+		log.Printf("Error querying user by id: %v", err)
+		return false
+	}
+	return true
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func SearchUser(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -34,21 +34,54 @@ func SearchUser(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	// Convert the result to JSON
 	response, err := json.Marshal(users)
 	if err != nil {
 		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
 		return
 	}
 
-	// Set the response headers and write the JSON response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 }
 
-var SearchEndPoint = models.Endpoint{
+func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	keyword := r.URL.Query().Get("search")
+	if keyword == "" {
+		http.Error(w, "Missing 'search' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	posts, err := user.SearchPostsByKeywords(db, keyword)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	response, err := json.Marshal(posts)
+	if err != nil {
+		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+}
+
+var SearchUserEndPoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "search/{username}",
-	HandlerFunction: SearchUser,
+	HandlerFunction: SearchUserHandler,
+}
+
+var SearchPostEndPoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "posts",
+	HandlerFunction: SearchPostHandler,
 }

@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func SignUpHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -64,10 +64,11 @@ func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Account created successfully"))
 }
 
 // TODO: In the future implement JWT.
-func UserLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func UserLoginHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -100,11 +101,11 @@ func UserLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 var UserSignUpEndPoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "signup",
-	HandlerFunction: UserSignUp,
+	HandlerFunction: SignUpHandler,
 }
 
 var UserLoginEndPoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "login",
-	HandlerFunction: UserLogin,
+	HandlerFunction: UserLoginHandler,
 }

@@ -33,8 +33,8 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	var parentID, quoteID *uint
 	if parentIDStr != "" {
-		parsedParentID, ParentErr := strconv.ParseUint(parentIDStr, 10, 32)
-		if ParentErr != nil {
+		parsedParentID, parentErr := strconv.ParseUint(parentIDStr, 10, 32)
+		if parentErr != nil {
 			http.Error(w, "Invalid parent ID", http.StatusBadRequest)
 			return
 		}
@@ -43,8 +43,8 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	if quoteIDStr != "" {
-		parsedQuoteID, ParsedErr := strconv.ParseUint(quoteIDStr, 10, 32)
-		if ParsedErr != nil {
+		parsedQuoteID, parsedErr := strconv.ParseUint(quoteIDStr, 10, 32)
+		if parsedErr != nil {
 			http.Error(w, "Invalid quote ID", http.StatusBadRequest)
 			return
 		}

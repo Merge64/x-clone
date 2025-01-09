@@ -64,7 +64,10 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Account created successfully"))
+	_, err := w.Write([]byte("Account created successfully"))
+	if err != nil {
+		return
+	}
 }
 
 // TODO: In the future implement JWT.

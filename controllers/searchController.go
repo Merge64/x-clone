@@ -42,7 +42,10 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		return
+	}
 }
 
 func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -71,7 +74,10 @@ func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		return
+	}
 }
 
 var SearchUserEndpoint = models.Endpoint{

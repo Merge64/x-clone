@@ -82,24 +82,21 @@ func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	err := db.Where("Mail = ?", mail).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return false
-
 	} else if err != nil {
 		log.Printf("Error querying user by email: %v", err)
 		return false
-
 	}
 	return true
 }
+
 func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 	var user models.User
 	err := db.Where("Username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return false
-
 	} else if err != nil {
 		log.Printf("Error querying user by username: %v", err)
 		return false
-
 	}
 	return true
 }
@@ -107,29 +104,23 @@ func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
 	var user models.User
 
-	if IsEmail(inputUser) {
-		err := db.Where("Mail = ? AND Password = ?", inputUser, password).First(&user).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false
-
-		} else if err != nil {
-			log.Printf("Error querying user by email: %v", err)
-			return false
-
-		}
-	} else {
-		err := db.Where("Username = ? AND Password = ?", inputUser, password).First(&user).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false
-
-		} else if err != nil {
-			log.Printf("Error querying user by username: %v", err)
-			return false
-
-		}
+	field := "Mail"
+	if !IsEmail(inputUser) {
+		field = "Username"
 	}
-
+	err := queryUserByField(db, field, inputUser, password, &user)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false
+		}
+		log.Printf("Error querying user by %s: %v", field, err)
+		return false
+	}
 	return true
+}
+
+func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
+	return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
 }
 
 func IsEmail(email string) bool {
@@ -141,7 +132,7 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
 	var users []models.User
 	result := db.Where("Username LIKE ?", username).First(&users)
 	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("no users found")
+		return nil, errors.New("no users found")
 	}
 	return users, nil
 }
@@ -172,7 +163,7 @@ func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body st
 	return nil
 }
 
-//func CreatePostComment(db *gorm.DB, userID uint, parentID, quote *uint, body string) error {
+// func CreatePostComment(db *gorm.DB, userID uint, parentID, quote *uint, body string) error {
 //	if userID == 0 || body == constants.EMPTY {
 //		return errors.New("required fields must not be empty")
 //	}

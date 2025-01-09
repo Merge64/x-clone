@@ -33,8 +33,8 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	var parentID, quoteID *uint
 	if parentIDStr != "" {
-		parsedParentID, err := strconv.ParseUint(parentIDStr, 10, 32)
-		if err != nil {
+		parsedParentID, err2 := strconv.ParseUint(parentIDStr, 10, 32)
+		if err2 != nil {
 			http.Error(w, "Invalid parent ID", http.StatusBadRequest)
 			return
 		}
@@ -43,8 +43,8 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	if quoteIDStr != "" {
-		parsedQuoteID, err := strconv.ParseUint(quoteIDStr, 10, 32)
-		if err != nil {
+		parsedQuoteID, err3 := strconv.ParseUint(quoteIDStr, 10, 32)
+		if err3 != nil {
 			http.Error(w, "Invalid quote ID", http.StatusBadRequest)
 			return
 		}
@@ -62,7 +62,10 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Post created successfully"))
+	_, err = w.Write([]byte("Post created successfully"))
+	if err != nil {
+		return
+	}
 }
 
 var CreatePostEndpoint = models.Endpoint{

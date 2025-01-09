@@ -184,6 +184,15 @@ func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body st
 //	return nil
 //}
 
+func ViewAllPosts(db *gorm.DB) ([]models.Post, error) {
+	var posts []models.Post
+	result := db.Find(&posts)
+	if result.RowsAffected == 0 {
+		return nil, errors.New("no posts found")
+	}
+	return posts, nil
+}
+
 // AUX.
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {

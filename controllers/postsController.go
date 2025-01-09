@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"gorm.io/gorm"
 	"main/constants"
 	"main/models"
@@ -10,6 +11,10 @@ import (
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -66,6 +71,36 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err != nil {
 		return
 	}
+}
+
+func ViewAllPostsHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	posts, err := user.ViewAllPosts(db)
+	if err != nil {
+		http.Error(w, "Failed to retrieve posts", http.StatusInternalServerError)
+		return
+	}
+	response, err2 := json.Marshal(posts)
+	if err2 != nil {
+		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = w.Write(response)
+	if err != nil {
+		return
+	}
+}
+
+var ViewAllPostsEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "posts/all",
+	HandlerFunction: ViewAllPostsHandler,
 }
 
 var CreatePostEndpoint = models.Endpoint{

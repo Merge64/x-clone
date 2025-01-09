@@ -10,6 +10,10 @@ import (
 )
 
 func SignUpHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -72,6 +76,11 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 // TODO: In the future implement JWT.
 func UserLoginHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return

@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
@@ -105,6 +106,19 @@ func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	}
 	return true
 }
+func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
+	var user models.User
+	err := db.Where("Username = ?", username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false
+
+	} else if err != nil {
+		log.Printf("Error querying user by username: %v", err)
+		return false
+
+	}
+	return true
+}
 
 func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
 	var user models.User
@@ -137,6 +151,15 @@ func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
 func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
 	return re.MatchString(email)
+}
+
+func SearchUsersByUsername(db *gorm.DB, username string) ([]models.User, error) {
+	var users []models.User
+	result := db.Where("Username LIKE ?", username).First(&users)
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("no users found")
+	}
+	return users, nil
 }
 
 // AUX.

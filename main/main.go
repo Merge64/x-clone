@@ -91,6 +91,10 @@ func startServer() {
 		controllers.UserLoginEndPoint.HandlerFunction(writer, request, db)
 	})
 
+	http.HandleFunc(controllers.SearchEndPoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.SearchEndPoint.HandlerFunction(writer, request, db)
+	})
+
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == constants.EMPTY {
 		log.Panic("serverPort environment variable is not set")

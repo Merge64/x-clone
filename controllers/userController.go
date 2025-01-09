@@ -48,6 +48,15 @@ func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	if user.UsernameAlreadyUsed(db, username) {
+		w.WriteHeader(http.StatusOK)
+		_, usernameErr := w.Write([]byte("Username already in use"))
+		if usernameErr != nil {
+			log.Printf("Failed to write response: %v", usernameErr)
+		}
+		return
+	}
+
 	creatingAccountErr := user.CreateAccount(db, username, password, mail, locationAux)
 	if creatingAccountErr != nil {
 		http.Error(w, "Invalid parameters to create an account", http.StatusInternalServerError)

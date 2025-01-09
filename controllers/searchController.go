@@ -28,7 +28,7 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	users, err := user.SearchUsersByUsername(db, username)
+	users, err := user.SearchUserByUsername(db, username)
 	if err != nil {
 		http.Error(w, "No users found", http.StatusNotFound)
 		return
@@ -74,13 +74,13 @@ func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-var SearchUserEndPoint = models.Endpoint{
+var SearchUserEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "search/{username}",
 	HandlerFunction: SearchUserHandler,
 }
 
-var SearchPostEndPoint = models.Endpoint{
+var SearchPostEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "posts",
 	HandlerFunction: SearchPostHandler,

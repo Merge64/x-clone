@@ -137,7 +137,7 @@ func IsEmail(email string) bool {
 	return re.MatchString(email)
 }
 
-func SearchUsersByUsername(db *gorm.DB, username string) ([]models.User, error) {
+func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
 	var users []models.User
 	result := db.Where("Username LIKE ?", username).First(&users)
 	if result.RowsAffected == 0 {

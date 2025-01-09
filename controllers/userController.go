@@ -98,13 +98,13 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 }
 
-var UserSignUpEndPoint = models.Endpoint{
+var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "signup",
 	HandlerFunction: SignUpHandler,
 }
 
-var UserLoginEndPoint = models.Endpoint{
+var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "login",
 	HandlerFunction: UserLoginHandler,

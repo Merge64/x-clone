@@ -55,7 +55,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	err = user.CreatePost(db, uint(userID), parentID, quoteID, body)
 	if err != nil {
 		if err.Error() == "user does not exist" {
-			http.Error(w, "User does not exist", http.StatusBadRequest)
+			http.Error(w, "user does not exist", http.StatusBadRequest)
 			return
 		}
 		http.Error(w, "Failed to create post", http.StatusInternalServerError)

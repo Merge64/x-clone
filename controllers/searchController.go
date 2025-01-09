@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"main/constants"
 	"main/models"
@@ -23,14 +25,18 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	username := strings.TrimPrefix(path, prefix)
-	if username == "" {
+	if username == constants.EMPTY {
 		http.Error(w, "Missing 'username' parameter", http.StatusBadRequest)
 		return
 	}
 
 	users, err := user.SearchUserByUsername(db, username)
 	if err != nil {
-		http.Error(w, "No users found", http.StatusNotFound)
+		if errors.Is(err, errors.New("no users found")) {
+			http.Error(w, "No users found with the given username.", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Internal server error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -60,9 +66,13 @@ func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	posts, err := user.SearchPostsByKeywords(db, keyword)
+	posts, err := user.SearchPostsByKeyword(db, keyword)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		if errors.Is(err, errors.New("no posts found")) {
+			http.Error(w, "No posts found with the given keyword.", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Internal server error: %v", err), http.StatusInternalServerError)
 		return
 	}
 

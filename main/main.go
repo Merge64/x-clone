@@ -82,7 +82,7 @@ func startServer() {
 		}
 	}(s)
 
-	// Here should go the functions for each endpoint
+	// Routing for each endpoint.
 	http.HandleFunc(controllers.UserSignUpEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.UserSignUpEndpoint.HandlerFunction(writer, request, db)
 	})
@@ -103,8 +103,12 @@ func startServer() {
 		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
 	})
 
-	http.HandleFunc(controllers.ViewAllPostsEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.ViewAllPostsEndpoint.HandlerFunction(writer, request, db)
+	http.HandleFunc(controllers.GetEveryPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetEveryPostEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.GetPostsByUserIDEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
 	})
 
 	serverPort := os.Getenv("SERVER_PORT")

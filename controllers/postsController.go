@@ -20,7 +20,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	quoteIDStr := r.FormValue("quote")
 	body := r.FormValue("body")
 
-	if body == "" {
+	if body == constants.EMPTY {
 		http.Error(w, "Body cannot be empty", http.StatusBadRequest)
 		return
 	}
@@ -32,7 +32,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	var parentID, quoteID *uint
-	if parentIDStr != "" {
+	if parentIDStr != constants.EMPTY {
 		parsedParentID, parentErr := strconv.ParseUint(parentIDStr, 10, 32)
 		if parentErr != nil {
 			http.Error(w, "Invalid parent ID", http.StatusBadRequest)
@@ -54,8 +54,8 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	err = user.CreatePost(db, uint(userID), parentID, quoteID, body)
 	if err != nil {
-		if err.Error() == "user does not exist" {
-			http.Error(w, "user does not exist", http.StatusBadRequest)
+		if err.Error() == constants.ERRNOUSER {
+			http.Error(w, constants.ERRNOUSER, http.StatusBadRequest)
 			return
 		}
 		http.Error(w, "Failed to create post", http.StatusInternalServerError)

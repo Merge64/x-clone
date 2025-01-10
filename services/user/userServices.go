@@ -59,7 +59,7 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 
 func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
 	if !userExists(db, userID) {
-		return errors.New("user does not exist")
+		return errors.New(constants.ERRNOUSER)
 	}
 
 	var currentUser models.Like
@@ -132,7 +132,7 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
 	var users []models.User
 	result := db.Where("Username LIKE ?", username).First(&users)
 	if result.RowsAffected == 0 {
-		return nil, errors.New("no users found")
+		return nil, errors.New(constants.ERRNOUSER)
 	}
 	return users, nil
 }
@@ -141,14 +141,14 @@ func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
 	var posts []models.Post
 	result := db.Where("Body ILIKE ?", "%"+keyword+"%").Find(&posts)
 	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("no posts found containing the keyword: %s", keyword)
+		return nil, fmt.Errorf(constants.ERRNOPOST+" keyword used: %s", keyword)
 	}
 	return posts, nil
 }
 
 func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body string) error {
 	if !userExists(db, userID) {
-		return errors.New("user does not exist")
+		return errors.New(constants.ERRNOUSER)
 	}
 	post := models.Post{
 		UserID:   userID,
@@ -157,32 +157,8 @@ func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body st
 		Body:     body,
 	}
 
-	if err := db.Create(&post).Error; err != nil {
-		return err
-	}
-	return nil
+	return db.Create(&post).Error
 }
-
-// func CreatePostComment(db *gorm.DB, userID uint, parentID, quote *uint, body string) error {
-//	if userID == 0 || body == constants.EMPTY {
-//		return errors.New("required fields must not be empty")
-//	}
-//	if !userExists(db, userID) {
-//		return errors.New("user does not exist")
-//	}
-//	var currentPost = models.Post{
-//		Model:    gorm.Model{},
-//		UserID:   userID,
-//		ParentID: parentID,
-//		Quote:    quote,
-//		Body:     body,
-//	}
-//	err := db.Model(models.Post{}).Create(&currentPost).Error
-//	if err != nil {
-//		return fmt.Errorf("failed to create post comment: %v", err)
-//	}
-//	return nil
-//}
 
 // AUX.
 

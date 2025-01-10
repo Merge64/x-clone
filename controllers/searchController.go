@@ -23,14 +23,14 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	username := strings.TrimPrefix(path, prefix)
-	if username == "" {
+	if username == constants.EMPTY {
 		http.Error(w, "Missing 'username' parameter", http.StatusBadRequest)
 		return
 	}
 
 	users, err := user.SearchUserByUsername(db, username)
 	if err != nil {
-		http.Error(w, "No users found", http.StatusNotFound)
+		http.Error(w, constants.ERRNOUSER, http.StatusNotFound)
 		return
 	}
 
@@ -55,7 +55,7 @@ func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	keyword := r.URL.Query().Get("search")
-	if keyword == "" {
+	if keyword == constants.EMPTY {
 		http.Error(w, "Missing 'search' query parameter", http.StatusBadRequest)
 		return
 	}

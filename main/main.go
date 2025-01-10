@@ -83,12 +83,24 @@ func startServer() {
 	}(s)
 
 	// Here should go the functions for each endpoint
-	http.HandleFunc(controllers.UserSignUpEndPoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.UserSignUpEndPoint.HandlerFunction(writer, request, db)
+	http.HandleFunc(controllers.UserSignUpEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.UserSignUpEndpoint.HandlerFunction(writer, request, db)
 	})
 
-	http.HandleFunc(controllers.UserLoginEndPoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.UserLoginEndPoint.HandlerFunction(writer, request, db)
+	http.HandleFunc(controllers.UserLoginEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.UserLoginEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.SearchUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.SearchUserEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.SearchPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.SearchPostEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.CreatePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
 	})
 
 	serverPort := os.Getenv("SERVER_PORT")

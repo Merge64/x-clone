@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func SignUpHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -48,6 +48,15 @@ func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	if user.UsernameAlreadyUsed(db, username) {
+		w.WriteHeader(http.StatusOK)
+		_, usernameErr := w.Write([]byte("Username already in use"))
+		if usernameErr != nil {
+			log.Printf("Failed to write response: %v", usernameErr)
+		}
+		return
+	}
+
 	creatingAccountErr := user.CreateAccount(db, username, password, mail, locationAux)
 	if creatingAccountErr != nil {
 		http.Error(w, "Invalid parameters to create an account", http.StatusInternalServerError)
@@ -55,10 +64,14 @@ func UserSignUp(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	_, err := w.Write([]byte("Account created successfully"))
+	if err != nil {
+		return
+	}
 }
 
 // TODO: In the future implement JWT.
-func UserLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func UserLoginHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -88,14 +101,14 @@ func UserLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 }
 
-var UserSignUpEndPoint = models.Endpoint{
+var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "signup",
-	HandlerFunction: UserSignUp,
+	HandlerFunction: SignUpHandler,
 }
 
-var UserLoginEndPoint = models.Endpoint{
+var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "login",
-	HandlerFunction: UserLogin,
+	HandlerFunction: UserLoginHandler,
 }

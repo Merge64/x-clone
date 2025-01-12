@@ -1,12 +1,16 @@
 package controllers
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"main/constants"
 	"main/models"
 	"main/services/user"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -66,6 +70,94 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err != nil {
 		return
 	}
+}
+
+func GetEveryPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	posts, err := user.GetAllPosts(db)
+	if err != nil {
+		if errors.Is(err, errors.New("no posts found")) {
+			http.Error(w, "No posts found.", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Internal server error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	response, err2 := json.Marshal(posts)
+	if err2 != nil {
+		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = w.Write(response)
+	if err != nil {
+		return
+	}
+}
+
+func GetPostsByUserIDHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	path := r.URL.Path
+	prefix := "/posts/"
+	if !strings.HasPrefix(path, prefix) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	urlID := strings.TrimPrefix(path, prefix)
+	if urlID == constants.EMPTY {
+		http.Error(w, "Missing 'ID' parameter", http.StatusBadRequest)
+		return
+	}
+	parsedID, err := strconv.ParseUint(urlID, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	finalID := uint(parsedID)
+
+	posts, err := user.GetAllPostsByUserID(db, finalID)
+	if err != nil {
+		if errors.Is(err, errors.New("no posts found")) {
+			http.Error(w, "No posts found with the given userID.", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Internal server error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	response, err := json.Marshal(posts)
+	if err != nil {
+		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(response)
+	if err != nil {
+		return
+	}
+}
+
+var GetPostsByUserIDEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "posts/{userid}",
+	HandlerFunction: GetPostsByUserIDHandler,
+}
+
+var GetEveryPostEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "posts/all",
+	HandlerFunction: GetEveryPostHandler,
 }
 
 var CreatePostEndpoint = models.Endpoint{

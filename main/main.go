@@ -102,6 +102,13 @@ func startServer() {
 	http.HandleFunc(controllers.CreatePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
 	})
+	http.HandleFunc(controllers.GetEveryPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetEveryPostEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.GetPostsByUserIDEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
+	})
 
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == constants.EMPTY {

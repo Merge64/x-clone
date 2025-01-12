@@ -28,6 +28,63 @@ func CreateAccount(db *gorm.DB, username, password, mail string, location *strin
 	return nil
 }
 
+func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body string) error {
+	if !userExists(db, userID) {
+		return errors.New(constants.ERRNOUSER)
+	}
+	post := models.Post{
+		UserID:   userID,
+		ParentID: parentID,
+		Quote:    quoteID,
+		Body:     body,
+	}
+
+	return db.Create(&post).Error
+}
+
+func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
+	var users []models.User
+	result := db.Where("Username LIKE ?", username).First(&users)
+	if result.RowsAffected == 0 {
+		return nil, errors.New(constants.ERRNOUSER)
+	}
+	return users, nil
+}
+
+func SearchPostsByKeyword(db *gorm.DB, keyword string) ([]models.Post, error) {
+	var posts []models.Post
+	result := db.Where("Body ILIKE ?", "%"+keyword+"%").Find(&posts)
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf(constants.ERRNOPOST+" keyword used: %s", keyword)
+	}
+	return posts, nil
+}
+
+func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
+	var posts []models.Post
+	// TODO SCALE THIS
+	result := db.Find(&posts)
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, errors.New(constants.ERRNOPOST)
+	}
+	return posts, nil
+}
+
+func GetAllPostsByUserID(db *gorm.DB, userID uint) ([]models.Post, error) {
+	var posts []models.Post
+	result := db.Where("user_id = ?", userID).Find(&posts)
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, errors.New(constants.ERRNOPOST)
+	}
+	return posts, nil
+}
+
 func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	if followingUserID == followedUserID {
 		return errors.New("invalid Id")
@@ -76,6 +133,8 @@ func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
 
 	return nil
 }
+
+// AUX.
 
 func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	var user models.User
@@ -127,40 +186,6 @@ func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
 	return re.MatchString(email)
 }
-
-func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
-	var users []models.User
-	result := db.Where("Username LIKE ?", username).First(&users)
-	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ERRNOUSER)
-	}
-	return users, nil
-}
-
-func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
-	var posts []models.Post
-	result := db.Where("Body ILIKE ?", "%"+keyword+"%").Find(&posts)
-	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf(constants.ERRNOPOST+" keyword used: %s", keyword)
-	}
-	return posts, nil
-}
-
-func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body string) error {
-	if !userExists(db, userID) {
-		return errors.New(constants.ERRNOUSER)
-	}
-	post := models.Post{
-		UserID:   userID,
-		ParentID: parentID,
-		Quote:    quoteID,
-		Body:     body,
-	}
-
-	return db.Create(&post).Error
-}
-
-// AUX.
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return db.Model(models.Follow{}).

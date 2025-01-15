@@ -23,6 +23,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	parentIDStr := r.FormValue("parent")
 	quoteIDStr := r.FormValue("quote")
 	body := r.FormValue("body")
+	fmt.Println(body)
 
 	if body == constants.EMPTY {
 		http.Error(w, "Body cannot be empty", http.StatusBadRequest)
@@ -46,7 +47,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		parentID = &tempParentID
 	}
 
-	if quoteIDStr != "" {
+	if quoteIDStr != constants.EMPTY {
 		parsedQuoteID, parsedErr := strconv.ParseUint(quoteIDStr, 10, 32)
 		if parsedErr != nil {
 			http.Error(w, "Invalid quote ID", http.StatusBadRequest)
@@ -72,7 +73,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 }
 
-func GetEveryPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func GetAllPostsHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -88,8 +89,8 @@ func GetEveryPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	response, err2 := json.Marshal(posts)
-	if err2 != nil {
+	response, errMarshal := json.Marshal(posts)
+	if errMarshal != nil {
 		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
 		return
 	}
@@ -126,13 +127,13 @@ func GetPostsByUserIDHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB
 	}
 	finalID := uint(parsedID)
 
-	posts, err := user.GetAllPostsByUserID(db, finalID)
-	if err != nil {
-		if errors.Is(err, errors.New("no posts found")) {
+	posts, errDB := user.GetAllPostsByUserID(db, finalID)
+	if errDB != nil {
+		if errors.Is(errDB, errors.New(constants.ERRNOPOST)) { // Directly compare with the constant
 			http.Error(w, "No posts found with the given userID.", http.StatusNotFound)
 			return
 		}
-		http.Error(w, fmt.Sprintf("Internal server error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Internal server error: %v", errDB), http.StatusInternalServerError)
 		return
 	}
 
@@ -148,16 +149,145 @@ func GetPostsByUserIDHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB
 	}
 }
 
-var GetPostsByUserIDEndpoint = models.Endpoint{
+func GetSpecificPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	postID, errPostID := extractPostID(r)
+	if errPostID != nil {
+		http.Error(w, errPostID.Error(), http.StatusBadRequest) // Handle invalid postID error
+		return
+	}
+
+	// Fetch the post from the database using the postID
+	var post models.Post
+	if err := db.First(&post, postID).Error; err != nil {
+		// Check for specific GORM error for "record not found"
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, constants.ERRNOPOST, http.StatusNotFound) // Post not found error
+			return
+		}
+
+		// For other errors, log and return an internal server error
+		http.Error(w, "An error occurred while fetching the post", http.StatusInternalServerError)
+		return
+	}
+
+	// Marshal the post into JSON and send as the response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if errEnc := json.NewEncoder(w).Encode(post); errEnc != nil {
+		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
+		return
+	}
+}
+
+func EditPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	postID, err := extractPostID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	newBody := r.FormValue("body")
+	if newBody == constants.EMPTY {
+		http.Error(w, "Body cannot be empty", http.StatusBadRequest)
+		return
+	}
+	post, getPostErr := user.GetPostByID(db, postID)
+	if getPostErr != nil {
+		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
+			http.Error(w, constants.ERRNOPOST, http.StatusNotFound) // Post not found error
+			return
+		}
+		http.Error(w, "An error occurred while fetching the post", http.StatusInternalServerError)
+		return
+	}
+	post.Body = newBody
+	if db.Save(&post).Error != nil {
+		http.Error(w, "Failed to update post", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("Post updated successfully"))
+}
+
+func DeletePostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	postID, err := extractPostID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	post, getPostErr := user.GetPostByID(db, postID)
+	if getPostErr != nil {
+		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
+			http.Error(w, constants.ERRNOPOST, http.StatusNotFound) // Post not found error
+			return
+		}
+		http.Error(w, "An error occurred while fetching the post", http.StatusInternalServerError)
+		return
+	}
+	if deleteErr := db.Delete(&post).Error; deleteErr != nil {
+		http.Error(w, "Failed to delete post", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("Post deleted successfully"))
+}
+
+// AUX.
+
+// Extract postID from the URL.
+const pathSize = 3 // It will always be /posts/{postid}. a way to overcome this is using MUX
+
+func extractPostID(r *http.Request) (uint, error) {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < pathSize {
+		return 0, errors.New("invalid URL format")
+	}
+	postID, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return 0, errors.New("invalid postid")
+	}
+	return uint(postID), nil
+}
+
+var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "posts/{userid}",
+	Path:            constants.BASEURL + "/profile/{userid}/posts",
 	HandlerFunction: GetPostsByUserIDHandler,
 }
 
-var GetEveryPostEndpoint = models.Endpoint{
+var GetAllPostsEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "posts/all",
-	HandlerFunction: GetEveryPostHandler,
+	HandlerFunction: GetAllPostsHandler,
+}
+
+var DeletePostEndpoint = models.Endpoint{
+	Method:          models.DELETE,
+	Path:            constants.BASEURL + "posts/{postid}/delete",
+	HandlerFunction: DeletePostHandler,
+}
+
+var EditPostEndpoint = models.Endpoint{
+	Method:          models.PUT,
+	Path:            constants.BASEURL + "posts/{postid}/edit",
+	HandlerFunction: EditPostHandler,
+}
+
+var GetSpecificPostEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "posts/{postid}",
+	HandlerFunction: GetSpecificPostHandler,
 }
 
 var CreatePostEndpoint = models.Endpoint{

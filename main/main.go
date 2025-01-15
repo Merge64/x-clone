@@ -102,12 +102,25 @@ func startServer() {
 	http.HandleFunc(controllers.CreatePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
 	})
-	http.HandleFunc(controllers.GetEveryPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.GetEveryPostEndpoint.HandlerFunction(writer, request, db)
+
+	http.HandleFunc(controllers.GetSpecificPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetSpecificPostEndpoint.HandlerFunction(writer, request, db)
 	})
 
-	http.HandleFunc(controllers.GetPostsByUserIDEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.GetPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
+	http.HandleFunc(controllers.EditPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.EditPostEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.DeletePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.DeletePostEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.GetAllPostsEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetAllPostsEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.GetAllPostsByUserIDEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
 	})
 
 	serverPort := os.Getenv("SERVER_PORT")

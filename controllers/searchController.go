@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"gorm.io/gorm"
 	"main/constants"
 	"main/models"
@@ -14,19 +12,19 @@ import (
 
 func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	path := r.URL.Path
 	prefix := "/search/"
 	if !strings.HasPrefix(path, prefix) {
-		http.Error(w, "invalid path", http.StatusBadRequest)
+		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
 
 	username := strings.TrimPrefix(path, prefix)
 	if username == constants.EMPTY {
-		http.Error(w, "missing 'username' parameter", http.StatusBadRequest)
+		http.Error(w, "Missing 'username' parameter", http.StatusBadRequest)
 		return
 	}
 
@@ -38,7 +36,7 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	response, err := json.Marshal(users)
 	if err != nil {
-		http.Error(w, "failed to serialize response", http.StatusInternalServerError)
+		http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
 		return
 	}
 
@@ -52,23 +50,19 @@ func SearchUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 func SearchPostHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	keyword := r.URL.Query().Get("search")
 	if keyword == constants.EMPTY {
-		http.Error(w, "missing 'search' query parameter", http.StatusBadRequest)
+		http.Error(w, "Missing 'search' query parameter", http.StatusBadRequest)
 		return
 	}
 
-	posts, err := user.SearchPostsByKeyword(db, keyword)
+	posts, err := user.SearchPostsByKeywords(db, keyword)
 	if err != nil {
-		if errors.Is(err, errors.New(constants.ERRNOPOST)) {
-			http.Error(w, constants.ERRNOPOST+" with given keyword.", http.StatusNotFound)
-			return
-		}
-		http.Error(w, fmt.Sprintf("internal server error: %v", err), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 

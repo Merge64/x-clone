@@ -11,34 +11,39 @@ import (
 )
 
 func ViewUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	userID, err := strconv.Atoi(r.PathValue("userid"))
-	if err != nil {
+	userID, atoiErr := strconv.Atoi(r.PathValue("userid"))
+	if atoiErr != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
-	user, getUserErr := user.GetUserByID(db, uint(userID))
+	currentUser, getUserErr := user.GetUserByID(db, uint(userID))
 	if getUserErr != nil {
 		http.Error(w, getUserErr.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if encodeError := json.NewEncoder(w).Encode(user); encodeError != nil {
+	if encodeError := json.NewEncoder(w).Encode(currentUser); encodeError != nil {
 		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	if _, err := w.Write([]byte("View Account successfully")); err != nil {
 		return
 	}
 }
 
 func EditUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	userID, err := strconv.Atoi(r.PathValue("userid"))
-	if err != nil {
+	userID, atoiErr := strconv.Atoi(r.PathValue("userid"))
+	if atoiErr != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
 	var currentUser models.User
-	err = json.NewDecoder(r.Body).Decode(&currentUser)
-	if err != nil {
+	decodeErr := json.NewDecoder(r.Body).Decode(&currentUser)
+	if decodeErr != nil {
 		http.Error(w, "Invalid user data", http.StatusBadRequest)
 		return
 	}
@@ -57,11 +62,16 @@ func EditUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB)
 		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
+	if _, err := w.Write([]byte("Edit Profile successfully")); err != nil {
+		return
+	}
 }
 
 func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	userID, err := strconv.Atoi(r.PathValue("userid"))
-	if err != nil {
+	userID, atoiErr := strconv.Atoi(r.PathValue("userid"))
+	if atoiErr != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
@@ -76,11 +86,17 @@ func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
+	if _, err := w.Write([]byte("View Followers Profile successfully")); err != nil {
+		return
+	}
+
 }
 
 func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	userID, err := strconv.Atoi(r.PathValue("userid"))
-	if err != nil {
+	userID, atoiErr := strconv.Atoi(r.PathValue("userid"))
+	if atoiErr != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
@@ -93,6 +109,11 @@ func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 
 	if encodeError := json.NewEncoder(w).Encode(following); encodeError != nil {
 		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	if _, err := w.Write([]byte("View Profile Following successfully")); err != nil {
 		return
 	}
 }

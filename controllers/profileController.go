@@ -91,7 +91,6 @@ func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 	if _, err := w.Write([]byte("View Followers Profile successfully")); err != nil {
 		return
 	}
-
 }
 
 func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {

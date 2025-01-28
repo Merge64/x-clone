@@ -30,29 +30,44 @@ func CreateAccount(db *gorm.DB, username, password, mail string, location *strin
 
 func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	if followingUserID == followedUserID {
-		return errors.New("invalid Id")
-	}
-	if alreadyFollows(db, followingUserID, followedUserID) {
-		return errors.New("user already follows")
+		return errors.New("invalid ID: user cannot follow themselves")
 	}
 
-	db.Model(models.Follow{}).Create(models.Follow{
-		Model:           gorm.Model{},
+	if alreadyFollows(db, followingUserID, followedUserID) {
+		return errors.New("user already follows this account")
+	}
+
+	follow := models.Follow{
 		FollowingUserID: followingUserID,
 		FollowedUserID:  followedUserID,
-	})
+	}
+
+	if err := db.Create(&follow).Error; err != nil {
+		log.Printf("Error creating follow record: %v", err)
+		return err
+	}
 
 	return nil
 }
 
 func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	if followingUserID == followedUserID {
-		return errors.New("invalid Id")
+		return errors.New("invalid ID: user cannot unfollow themselves")
 	}
 
-	var user models.Follow
-	db.Model(models.Follow{}).First(&user, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID)
-	db.Model(models.Follow{}).Delete(&user)
+	// Perform the delete operation
+	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).
+		Delete(&models.Follow{})
+
+	// Check if the follow relationship was deleted
+	if result.Error != nil {
+		log.Printf("Error deleting follow record: %v", result.Error)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("no follow relationship found to delete")
+	}
 
 	return nil
 }
@@ -200,8 +215,20 @@ func queryUserByField(db *gorm.DB, field, value, password string, user *models.U
 }
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
-	return db.Model(models.Follow{}).
-		Where(models.Follow{}, "FollowingUserID = ? AND FollowedUserID = ?", followingUserID, followedUserID).Error == nil
+	var follow models.Follow
+	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).First(&follow)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// No record found, the user does not follow
+			return false
+		}
+		// Log and handle other unexpected errors
+		log.Printf("Error querying database: %v", result.Error)
+		return false
+	}
+
+	// If no error, it means a record exists
+	return true
 }
 
 func isLiked(db *gorm.DB, userID, parentID uint) bool {

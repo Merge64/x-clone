@@ -108,6 +108,7 @@ func GetPostsByUserIDHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
 	path := r.URL.Path
 	prefix := "/posts/"
 	if !strings.HasPrefix(path, prefix) {
@@ -120,6 +121,7 @@ func GetPostsByUserIDHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB
 		http.Error(w, "Missing 'ID' parameter", http.StatusBadRequest)
 		return
 	}
+
 	parsedID, err := strconv.ParseUint(urlID, 10, 32)
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)

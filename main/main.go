@@ -129,13 +129,15 @@ func startServer() {
 		controllers.ViewUserProfileEndpoint.HandlerFunction(writer, request, db)
 	})
 
-	http.HandleFunc(controllers.ViewFollowersProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.ViewFollowersProfileEndpoint.HandlerFunction(writer, request, db)
-	})
+	http.HandleFunc(controllers.ViewFollowersProfileEndpoint.Path,
+		func(writer http.ResponseWriter, request *http.Request) {
+			controllers.ViewFollowersProfileEndpoint.HandlerFunction(writer, request, db)
+		})
 
-	http.HandleFunc(controllers.ViewFollowingProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.ViewFollowingProfileEndpoint.HandlerFunction(writer, request, db)
-	})
+	http.HandleFunc(controllers.ViewFollowingProfileEndpoint.Path,
+		func(writer http.ResponseWriter, request *http.Request) {
+			controllers.ViewFollowingProfileEndpoint.HandlerFunction(writer, request, db)
+		})
 
 	http.HandleFunc(controllers.EditUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.EditUserProfileEndpoint.HandlerFunction(writer, request, db)

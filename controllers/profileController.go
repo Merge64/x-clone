@@ -23,7 +23,10 @@ func ViewUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB)
 		return
 	}
 
-	json.NewEncoder(w).Encode(user)
+	if encodeError := json.NewEncoder(w).Encode(user); encodeError != nil {
+		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func EditUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -46,11 +49,14 @@ func EditUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB)
 	}
 
 	if updateProfileErr := user.UpdateProfile(db, &currentUser); updateProfileErr != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, updateProfileErr.Error(), http.StatusBadRequest)
 		return
 	}
 
-	json.NewEncoder(w).Encode(currentUser)
+	if encodeError := json.NewEncoder(w).Encode(currentUser); encodeError != nil {
+		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -66,7 +72,10 @@ func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 		return
 	}
 
-	json.NewEncoder(w).Encode(followers)
+	if encodeError := json.NewEncoder(w).Encode(followers); encodeError != nil {
+		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -82,7 +91,10 @@ func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 		return
 	}
 
-	json.NewEncoder(w).Encode(following)
+	if encodeError := json.NewEncoder(w).Encode(following); encodeError != nil {
+		http.Error(w, encodeError.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // ----------------------------- AUX ----------------------------- //

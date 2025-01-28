@@ -53,16 +53,38 @@ func EditUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB)
 	json.NewEncoder(w).Encode(currentUser)
 }
 
+func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	userID, err := strconv.Atoi(r.PathValue("userid"))
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	followers, getFollowersErr := user.GetFollowers(db, uint(userID))
+	if getFollowersErr != nil {
+		http.Error(w, getFollowersErr.Error(), http.StatusBadRequest)
+		return
+	}
+
+	json.NewEncoder(w).Encode(followers)
+}
+
 // ----------------------------- AUX ----------------------------- //
+
+var ViewFollowersProfileEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "profile/followers/user/{userid}",
+	HandlerFunction: ViewFollowersProfileHandler,
+}
 
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "/profile/{userid}",
+	Path:            constants.BASEURL + "profile/{userid}",
 	HandlerFunction: ViewUserProfileHandler,
 }
 
 var EditUserProfileEndpoint = models.Endpoint{
 	Method:          models.PUT,
-	Path:            constants.BASEURL + "/profile/{userid}",
+	Path:            constants.BASEURL + "profile/{userid}/edit",
 	HandlerFunction: EditUserProfileHandler,
 }

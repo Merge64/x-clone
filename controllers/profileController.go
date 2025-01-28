@@ -69,12 +69,34 @@ func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 	json.NewEncoder(w).Encode(followers)
 }
 
+func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	userID, err := strconv.Atoi(r.PathValue("userid"))
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	following, getFollowingErr := user.GetFollowing(db, uint(userID))
+	if getFollowingErr != nil {
+		http.Error(w, getFollowingErr.Error(), http.StatusBadRequest)
+		return
+	}
+
+	json.NewEncoder(w).Encode(following)
+}
+
 // ----------------------------- AUX ----------------------------- //
 
 var ViewFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "profile/followers/user/{userid}",
 	HandlerFunction: ViewFollowersProfileHandler,
+}
+
+var ViewFollowingProfileEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "profile/following/user/{userid}",
+	HandlerFunction: ViewFollowingProfileHandler,
 }
 
 var ViewUserProfileEndpoint = models.Endpoint{

@@ -225,6 +225,20 @@ func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
 	return followers, nil
 }
 
+func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
+	var following []models.User
+	result := db.Table("users").
+		Select("users.*").
+		Joins("JOIN follows ON users.id = follows.followed_user_id").
+		Where("following_user_id = ?", u).
+		Find(&following)
+
+	if result.RowsAffected == 0 {
+		return nil, errors.New(constants.ERRNOUSER)
+	}
+	return following, nil
+}
+
 func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
 	return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
 }

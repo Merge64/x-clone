@@ -183,6 +183,18 @@ func IsEmail(email string) bool {
 	return re.MatchString(email)
 }
 
+func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
+	var user models.User
+	err := db.First(&user, userID).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return user, errors.New(constants.ERRNOUSER)
+		}
+		return user, errors.New("failed to retrieve the user from the database")
+	}
+	return user, nil
+}
+
 func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 	var post models.Post
 	err := db.First(&post, postID).Error

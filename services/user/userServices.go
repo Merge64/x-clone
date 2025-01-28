@@ -207,6 +207,10 @@ func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 	return post, nil
 }
 
+func UpdateProfile(db *gorm.DB, user *models.User) error {
+	return db.Save(user).Error
+}
+
 func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
 	return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
 }

@@ -55,11 +55,9 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 		return errors.New("invalid ID: user cannot unfollow themselves")
 	}
 
-	// Perform the delete operation
 	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).
 		Delete(&models.Follow{})
 
-	// Check if the follow relationship was deleted
 	if result.Error != nil {
 		log.Printf("Error deleting follow record: %v", result.Error)
 		return result.Error
@@ -217,17 +215,16 @@ func queryUserByField(db *gorm.DB, field, value, password string, user *models.U
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	var follow models.Follow
 	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).First(&follow)
+
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// No record found, the user does not follow
 			return false
 		}
-		// Log and handle other unexpected errors
 		log.Printf("Error querying database: %v", result.Error)
 		return false
-	}
 
-	// If no error, it means a record exists
+	}
 	return true
 }
 

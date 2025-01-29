@@ -138,7 +138,7 @@ func FollowUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("Follows user successfully"))
 	if err != nil {
 		log.Printf("Failed to write response: %v", err)
@@ -168,7 +168,7 @@ func UnfollowUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("Unfollows user successfully"))
 	if err != nil {
 		log.Printf("Failed to write response: %v", err)
@@ -180,7 +180,6 @@ func getUserID(r *http.Request) (uint, error) {
 	if decodeErr := json.NewDecoder(r.Body).Decode(&currentUser); decodeErr != nil {
 		return 0, decodeErr
 	}
-
 	return currentUser.ID, nil
 }
 

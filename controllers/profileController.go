@@ -28,7 +28,7 @@ func ViewUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("View Account successfully")); err != nil {
 		return
 	}
@@ -63,7 +63,8 @@ func EditUserProfileHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write([]byte("Edit Profile successfully")); err != nil {
 		return
 	}
@@ -87,7 +88,8 @@ func ViewFollowersProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write([]byte("View Followers Profile successfully")); err != nil {
 		return
 	}
@@ -111,7 +113,8 @@ func ViewFollowingProfileHandler(w http.ResponseWriter, r *http.Request, db *gor
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write([]byte("View Profile Following successfully")); err != nil {
 		return
 	}

@@ -223,7 +223,6 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 		}
 		log.Printf("Error querying database: %v", result.Error)
 		return false
-
 	}
 	return true
 }

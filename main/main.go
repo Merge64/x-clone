@@ -83,6 +83,8 @@ func startServer() {
 	}(s)
 
 	// Here should go the functions for each endpoint
+	// TODO: Implement a function that activates all the endpoints
+
 	http.HandleFunc(controllers.UserSignUpEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.UserSignUpEndpoint.HandlerFunction(writer, request, db)
 	})
@@ -123,14 +125,33 @@ func startServer() {
 		controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
 	})
 
-	http.HandleFunc(controllers.FollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+ feature/back/endpdev/profile
+	http.HandleFunc(controllers.ViewUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.ViewUserProfileEndpoint.HandlerFunction(writer, request, db)
+	})
+
+	http.HandleFunc(controllers.ViewFollowersProfileEndpoint.Path,
+		func(writer http.ResponseWriter, request *http.Request) {
+			controllers.ViewFollowersProfileEndpoint.HandlerFunction(writer, request, db)
+		})
+
+	http.HandleFunc(controllers.ViewFollowingProfileEndpoint.Path,
+		func(writer http.ResponseWriter, request *http.Request) {
+			controllers.ViewFollowingProfileEndpoint.HandlerFunction(writer, request, db)
+		})
+
+	http.HandleFunc(controllers.EditUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.EditUserProfileEndpoint.HandlerFunction(writer, request, db)
+    
+    	http.HandleFunc(controllers.FollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.FollowUserEndpoint.HandlerFunction(writer, request, db)
 	})
 
 	http.HandleFunc(controllers.UnfollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.UnfollowUserEndpoint.HandlerFunction(writer, request, db)
+ feature/back/create-endpoints
 	})
-
+    
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == constants.EMPTY {
 		log.Panic("serverPort environment variable is not set")

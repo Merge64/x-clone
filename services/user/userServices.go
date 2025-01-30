@@ -105,12 +105,13 @@ func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
 	if result.RowsAffected == 0 {
 		return nil, fmt.Errorf(constants.ERRNOPOST+" keyword used: %s", keyword)
 	}
+
 	return posts, nil
 }
 
 func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 	var posts []models.Post
-	// TODO SCALE THIS
+	// TODO: SCALE THIS
 	result := db.Find(&posts)
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
@@ -118,6 +119,7 @@ func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 	if result.RowsAffected == 0 {
 		return nil, errors.New(constants.ERRNOPOST)
 	}
+
 	return posts, nil
 }
 
@@ -130,6 +132,7 @@ func GetAllPostsByUserID(db *gorm.DB, userID uint) ([]models.Post, error) {
 	if result.RowsAffected == 0 {
 		return nil, errors.New(constants.ERRNOPOST)
 	}
+
 	return posts, nil
 }
 
@@ -158,6 +161,7 @@ func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 		log.Printf("Error querying user by email: %v", err)
 		return false
 	}
+
 	return true
 }
 
@@ -170,6 +174,7 @@ func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 		log.Printf("Error querying user by username: %v", err)
 		return false
 	}
+
 	return true
 }
 
@@ -188,12 +193,26 @@ func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
 		log.Printf("Error querying user by %s: %v", field, err)
 		return false
 	}
+
 	return true
 }
 
 func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
 	return re.MatchString(email)
+}
+
+func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
+	var user models.User
+	err := db.First(&user, userID).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return user, errors.New(constants.ERRNOUSER)
+		}
+		return user, errors.New("failed to retrieve the user from the database")
+	}
+
+	return user, nil
 }
 
 func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
@@ -205,7 +224,42 @@ func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 		}
 		return post, errors.New("failed to retrieve the post from the database")
 	}
+
 	return post, nil
+}
+
+func UpdateProfile(db *gorm.DB, user *models.User) error {
+	return db.Save(user).Error
+}
+
+func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
+	var followers []models.User
+	result := db.Table("users").
+		Select("users.*").
+		Joins("JOIN follows ON users.id = follows.following_user_id").
+		Where("followed_user_id = ?", userID).
+		Find(&followers)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+
+	return followers, nil
+}
+
+func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
+	var following []models.User
+	result := db.Table("users").
+		Select("users.*").
+		Joins("JOIN follows ON users.id = follows.followed_user_id").
+		Where("following_user_id = ?", u).
+		Find(&following)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+
+	return following, nil
 }
 
 func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
@@ -240,5 +294,6 @@ func userExists(db *gorm.DB, userID uint) bool {
 		log.Printf("Error querying user by id: %v", err)
 		return false
 	}
+
 	return true
 }

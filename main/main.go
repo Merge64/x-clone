@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -54,6 +55,13 @@ func startDatabase() *gorm.DB {
 	return db
 }
 
+func createUserHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Use `db` inside this handler
+		c.JSON(http.StatusOK, gin.H{"message": "User created"})
+	}
+}
+
 func migrateSchemas(db *gorm.DB) {
 	err := db.AutoMigrate(&models.Post{}, &models.Follow{}, &models.Like{}, &models.User{})
 	if err != nil {
@@ -82,76 +90,97 @@ func startServer() {
 		}
 	}(s)
 
-	// Here should go the functions for each endpoint
-	// TODO: Implement a function that activates all the endpoints
+	r := gin.Default()
+	r.POST(controllers.UserSignUpEndpoint.Path, controllers.UserSignUpEndpoint.HandlerFunction(db))
+	r.POST(controllers.UserLoginEndpoint.Path, controllers.UserLoginEndpoint.HandlerFunction(db))
+	err := r.Run()
+	if err != nil {
+		return
+	}
 
-	http.HandleFunc(controllers.UserSignUpEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.UserSignUpEndpoint.HandlerFunction(writer, request, db)
-	})
+	//// Here should go the functions for each endpoint
+	//// TODO: Implement a function that activates all the endpoints
+	//
+	//http.HandleFunc(controllers.UserSignUpEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.UserSignUpEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.UserLoginEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.UserLoginEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.SearchUserEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.SearchUserEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.SearchPostEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.SearchPostEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.CreatePostEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.GetSpecificPostEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.GetSpecificPostEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.EditPostEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.EditPostEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.DeletePostEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.DeletePostEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.GetAllPostsEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.GetAllPostsEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.GetAllPostsByUserIDEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.ViewUserProfileEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.ViewUserProfileEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.GetFollowersProfileEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.GetFollowersProfileEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.GetFollowingProfileEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.GetFollowingProfileEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.EditUserProfileEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.EditUserProfileEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.FollowUserEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.FollowUserEndpoint.HandlerFunction(writer, request, db)
+	//	})
+	//
+	//http.HandleFunc(controllers.UnfollowUserEndpoint.Path,
+	//	func(writer http.ResponseWriter, request *http.Request) {
+	//		controllers.UnfollowUserEndpoint.HandlerFunction(writer, request, db)
+	//	})
 
-	http.HandleFunc(controllers.UserLoginEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.UserLoginEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.SearchUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.SearchUserEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.SearchPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.SearchPostEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.CreatePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.GetSpecificPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.GetSpecificPostEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.EditPostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.EditPostEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.DeletePostEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.DeletePostEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.GetAllPostsEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.GetAllPostsEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.GetAllPostsByUserIDEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
-	})
-
- feature/back/endpdev/profile
-	http.HandleFunc(controllers.ViewUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.ViewUserProfileEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.ViewFollowersProfileEndpoint.Path,
-		func(writer http.ResponseWriter, request *http.Request) {
-			controllers.ViewFollowersProfileEndpoint.HandlerFunction(writer, request, db)
-		})
-
-	http.HandleFunc(controllers.ViewFollowingProfileEndpoint.Path,
-		func(writer http.ResponseWriter, request *http.Request) {
-			controllers.ViewFollowingProfileEndpoint.HandlerFunction(writer, request, db)
-		})
-
-	http.HandleFunc(controllers.EditUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.EditUserProfileEndpoint.HandlerFunction(writer, request, db)
-    
-    	http.HandleFunc(controllers.FollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.FollowUserEndpoint.HandlerFunction(writer, request, db)
-	})
-
-	http.HandleFunc(controllers.UnfollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
-		controllers.UnfollowUserEndpoint.HandlerFunction(writer, request, db)
- feature/back/create-endpoints
-	})
-    
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == constants.EMPTY {
 		log.Panic("serverPort environment variable is not set")

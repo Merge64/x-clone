@@ -125,6 +125,7 @@ func startServer() {
 		controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
 	})
 
+ feature/back/endpdev/profile
 	http.HandleFunc(controllers.ViewUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.ViewUserProfileEndpoint.HandlerFunction(writer, request, db)
 	})
@@ -141,8 +142,16 @@ func startServer() {
 
 	http.HandleFunc(controllers.EditUserProfileEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		controllers.EditUserProfileEndpoint.HandlerFunction(writer, request, db)
+    
+    	http.HandleFunc(controllers.FollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.FollowUserEndpoint.HandlerFunction(writer, request, db)
 	})
 
+	http.HandleFunc(controllers.UnfollowUserEndpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
+		controllers.UnfollowUserEndpoint.HandlerFunction(writer, request, db)
+ feature/back/create-endpoints
+	})
+    
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == constants.EMPTY {
 		log.Panic("serverPort environment variable is not set")

@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"encoding/json"
+	"fmt"
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
 	"main/models"
 	"main/services/user"
 	"net/http"
+	"strconv"
 )
 
 func SignUpHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -109,6 +112,87 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if err != nil {
 		log.Printf("Failed to write response: %v", err)
 	}
+}
+
+func FollowUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	followingID, getIDErr := getUserID(r)
+	if getIDErr != nil {
+		http.Error(w, "Invalid user", http.StatusBadRequest)
+		return
+	}
+
+	followedUserID, atoiErr := strconv.Atoi(r.PathValue("userid"))
+	if atoiErr != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if followErr := user.FollowAccount(db, followingID, uint(followedUserID)); followErr != nil {
+		fmt.Println(followErr)
+		http.Error(w, "Failed to follow user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("Follows user successfully"))
+	if err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
+}
+
+func UnfollowUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	followingID, getIDErr := getUserID(r)
+	if getIDErr != nil {
+		http.Error(w, "Invalid user", http.StatusBadRequest)
+		return
+	}
+
+	followedUserID, atoiErr := strconv.Atoi(r.PathValue("userid"))
+	if atoiErr != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if unfollowErr := user.UnfollowAccount(db, followingID, uint(followedUserID)); unfollowErr != nil {
+		http.Error(w, "Failed to follow user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("Unfollows user successfully"))
+	if err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
+}
+
+func getUserID(r *http.Request) (uint, error) {
+	var currentUser models.User
+	if decodeErr := json.NewDecoder(r.Body).Decode(&currentUser); decodeErr != nil {
+		return 0, decodeErr
+	}
+	return currentUser.ID, nil
+}
+
+var FollowUserEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "follow/{userid}",
+	HandlerFunction: FollowUserHandler,
+}
+
+var UnfollowUserEndpoint = models.Endpoint{
+	Method:          models.DELETE,
+	Path:            constants.BASEURL + "unfollow/{userid}",
+	HandlerFunction: UnfollowUserHandler,
 }
 
 var UserSignUpEndpoint = models.Endpoint{

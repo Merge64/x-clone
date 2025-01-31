@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
+	middleware "main/authentication"
 	"main/constants"
 	"main/controllers"
 	"main/models"
@@ -93,6 +94,9 @@ func startServer() {
 	r := gin.Default()
 	r.POST(controllers.UserSignUpEndpoint.Path, controllers.UserSignUpEndpoint.HandlerFunction(db))
 	r.POST(controllers.UserLoginEndpoint.Path, controllers.UserLoginEndpoint.HandlerFunction(db))
+
+	r.POST(controllers.FollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.FollowUserEndpoint.HandlerFunction(db))
+
 	err := r.Run()
 	if err != nil {
 		return

@@ -27,28 +27,28 @@ func CreateAccount(db *gorm.DB, username, password, mail string, location *strin
 	return nil
 }
 
-//	func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
-//		if followingUserID == followedUserID {
-//			return errors.New("invalid ID: user cannot follow themselves")
-//		}
-//
-//		if alreadyFollows(db, followingUserID, followedUserID) {
-//			return errors.New("user already follows this account")
-//		}
-//
-//		follow := models.Follow{
-//			FollowingUserID: followingUserID,
-//			FollowedUserID:  followedUserID,
-//		}
-//
-//		if err := db.Create(&follow).Error; err != nil {
-//			log.Printf("Error creating follow record: %v", err)
-//			return err
-//		}
-//
-//		return nil
-//	}
-//
+func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
+	if followingUserID == followedUserID {
+		return errors.New("invalid ID: user cannot follow themselves")
+	}
+
+	if alreadyFollows(db, followingUserID, followedUserID) {
+		return errors.New("user already follows this account")
+	}
+
+	follow := models.Follow{
+		FollowingUserID: followingUserID,
+		FollowedUserID:  followedUserID,
+	}
+
+	if err := db.Create(&follow).Error; err != nil {
+		log.Printf("Error creating follow record: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 //	func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 //		if followingUserID == followedUserID {
 //			return errors.New("invalid ID: user cannot unfollow themselves")
@@ -212,71 +212,70 @@ func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
 	return user, nil
 }
 
-//func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
-//	var post models.Post
-//	err := db.First(&post, postID).Error
-//	if err != nil {
-//		if errors.Is(err, gorm.ErrRecordNotFound) {
-//			return post, errors.New(constants.ERRNOPOST)
+//	func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
+//		var post models.Post
+//		err := db.First(&post, postID).Error
+//		if err != nil {
+//			if errors.Is(err, gorm.ErrRecordNotFound) {
+//				return post, errors.New(constants.ERRNOPOST)
+//			}
+//			return post, errors.New("failed to retrieve the post from the database")
 //		}
-//		return post, errors.New("failed to retrieve the post from the database")
+//
+//		return post, nil
 //	}
 //
-//	return post, nil
-//}
-//
-//func UpdateProfile(db *gorm.DB, user *models.User) error {
-//	return db.Save(user).Error
-//}
-//
-//func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
-//	var followers []models.User
-//	result := db.Table("users").
-//		Select("users.*").
-//		Joins("JOIN follows ON users.id = follows.following_user_id").
-//		Where("followed_user_id = ?", userID).
-//		Find(&followers)
-//
-//	if result.Error != nil {
-//		return nil, fmt.Errorf("internal server error: %w", result.Error)
+//	func UpdateProfile(db *gorm.DB, user *models.User) error {
+//		return db.Save(user).Error
 //	}
 //
-//	return followers, nil
-//}
+//	func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
+//		var followers []models.User
+//		result := db.Table("users").
+//			Select("users.*").
+//			Joins("JOIN follows ON users.id = follows.following_user_id").
+//			Where("followed_user_id = ?", userID).
+//			Find(&followers)
 //
-//func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
-//	var following []models.User
-//	result := db.Table("users").
-//		Select("users.*").
-//		Joins("JOIN follows ON users.id = follows.followed_user_id").
-//		Where("following_user_id = ?", u).
-//		Find(&following)
-//
-//	if result.Error != nil {
-//		return nil, fmt.Errorf("internal server error: %w", result.Error)
-//	}
-//
-//	return following, nil
-//}
-//
-//func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
-//	return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
-//}
-//
-//func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
-//	var follow models.Follow
-//	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).First(&follow)
-//
-//	if result.Error != nil {
-//		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-//			// No record found, the user does not follow
-//			return false
+//		if result.Error != nil {
+//			return nil, fmt.Errorf("internal server error: %w", result.Error)
 //		}
-//		log.Printf("Error querying database: %v", result.Error)
-//		return false
+//
+//		return followers, nil
 //	}
-//	return true
-//}
+//
+//	func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
+//		var following []models.User
+//		result := db.Table("users").
+//			Select("users.*").
+//			Joins("JOIN follows ON users.id = follows.followed_user_id").
+//			Where("following_user_id = ?", u).
+//			Find(&following)
+//
+//		if result.Error != nil {
+//			return nil, fmt.Errorf("internal server error: %w", result.Error)
+//		}
+//
+//		return following, nil
+//	}
+//
+//	func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
+//		return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
+//	}
+func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
+	var follow models.Follow
+	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).First(&follow)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return false
+		}
+		log.Printf("Error querying database: %v", result.Error)
+		return false
+	}
+	return true
+}
+
 //
 //func isLiked(db *gorm.DB, userID, parentID uint) bool {
 //	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil

@@ -224,11 +224,11 @@ func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
 //
 //		return post, nil
 //	}
-//
-//	func UpdateProfile(db *gorm.DB, user *models.User) error {
-//		return db.Save(user).Error
-//	}
-//
+
+func UpdateProfile(db *gorm.DB, user *models.User) error {
+	return db.Save(user).Error
+}
+
 //	func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
 //		var followers []models.User
 //		result := db.Table("users").

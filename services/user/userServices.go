@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
@@ -229,36 +230,36 @@ func UpdateProfile(db *gorm.DB, user *models.User) error {
 	return db.Save(user).Error
 }
 
-//	func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
-//		var followers []models.User
-//		result := db.Table("users").
-//			Select("users.*").
-//			Joins("JOIN follows ON users.id = follows.following_user_id").
-//			Where("followed_user_id = ?", userID).
-//			Find(&followers)
-//
-//		if result.Error != nil {
-//			return nil, fmt.Errorf("internal server error: %w", result.Error)
-//		}
-//
-//		return followers, nil
-//	}
-//
-//	func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
-//		var following []models.User
-//		result := db.Table("users").
-//			Select("users.*").
-//			Joins("JOIN follows ON users.id = follows.followed_user_id").
-//			Where("following_user_id = ?", u).
-//			Find(&following)
-//
-//		if result.Error != nil {
-//			return nil, fmt.Errorf("internal server error: %w", result.Error)
-//		}
-//
-//		return following, nil
-//	}
-//
+func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
+	var followers []models.User
+	result := db.Table("users").
+		Select("users.*").
+		Joins("JOIN follows ON users.id = follows.following_user_id").
+		Where("followed_user_id = ?", userID).
+		Find(&followers)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+
+	return followers, nil
+}
+
+func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
+	var following []models.User
+	result := db.Table("users").
+		Select("users.*").
+		Joins("JOIN follows ON users.id = follows.followed_user_id").
+		Where("following_user_id = ?", u).
+		Find(&following)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+
+	return following, nil
+}
+
 //	func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
 //		return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
 //	}

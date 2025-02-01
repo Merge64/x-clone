@@ -97,8 +97,12 @@ func startServer() {
 
 	r.POST(controllers.FollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.FollowUserEndpoint.HandlerFunction(db))
 	r.DELETE(controllers.UnfollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.UnfollowUserEndpoint.HandlerFunction(db))
+
 	r.GET(controllers.ViewUserProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.ViewUserProfileEndpoint.HandlerFunction(db))
 	r.PUT(controllers.EditUserProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.EditUserProfileEndpoint.HandlerFunction(db))
+
+	r.GET(controllers.GetFollowersProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetFollowersProfileEndpoint.HandlerFunction(db))
+	r.GET(controllers.GetFollowingProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetFollowingProfileEndpoint.HandlerFunction(db))
 
 	err := r.Run()
 	if err != nil {

@@ -49,26 +49,26 @@ func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-//	func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
-//		if followingUserID == followedUserID {
-//			return errors.New("invalid ID: user cannot unfollow themselves")
-//		}
-//
-//		result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).
-//			Delete(&models.Follow{})
-//
-//		if result.Error != nil {
-//			log.Printf("Error deleting follow record: %v", result.Error)
-//			return result.Error
-//		}
-//
-//		if result.RowsAffected == 0 {
-//			return errors.New("no follow relationship found to delete")
-//		}
-//
-//		return nil
-//	}
-//
+func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
+	if followingUserID == followedUserID {
+		return errors.New("invalid ID: user cannot unfollow themselves")
+	}
+
+	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).
+		Delete(&models.Follow{})
+
+	if result.Error != nil {
+		log.Printf("Error deleting follow record: %v", result.Error)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("no follow relationship found to delete")
+	}
+
+	return nil
+}
+
 //	func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
 //		if !userExists(db, userID) {
 //			return errors.New(constants.ERRNOUSER)

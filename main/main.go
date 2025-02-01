@@ -96,6 +96,7 @@ func startServer() {
 	r.POST(controllers.UserLoginEndpoint.Path, controllers.UserLoginEndpoint.HandlerFunction(db))
 
 	r.POST(controllers.FollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.FollowUserEndpoint.HandlerFunction(db))
+	r.DELETE(controllers.UnfollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.UnfollowUserEndpoint.HandlerFunction(db))
 
 	err := r.Run()
 	if err != nil {

@@ -132,35 +132,30 @@ func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-//	func UnfollowUserHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-//		if r.Method != http.MethodDelete {
-//			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-//			return
-//		}
-//
-//		followingID, getIDErr := getUserID(r)
-//		if getIDErr != nil {
-//			http.Error(w, "Invalid user", http.StatusBadRequest)
-//			return
-//		}
-//
-//		followedUserID, atoiErr := strconv.Atoi(r.PathValue("userid"))
-//		if atoiErr != nil {
-//			http.Error(w, "Invalid user ID", http.StatusBadRequest)
-//			return
-//		}
-//
-//		if unfollowErr := user.UnfollowAccount(db, followingID, uint(followedUserID)); unfollowErr != nil {
-//			http.Error(w, "Failed to follow user", http.StatusInternalServerError)
-//			return
-//		}
-//
-//		w.WriteHeader(http.StatusOK)
-//		_, err := w.Write([]byte("Unfollows user successfully"))
-//		if err != nil {
-//			log.Printf("Failed to write response: %v", err)
-//		}
-//	}
+func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		followingID, err := getUserID(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		followedUserID, atoiErr := strconv.Atoi(c.Param("userid"))
+		if atoiErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		if unfollowErr := user.UnfollowAccount(db, followingID, uint(followedUserID)); unfollowErr != nil {
+			log.Println("Unfollow error:", unfollowErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unfollow user"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Unfollowed user successfully"})
+	}
+}
+
 func getUserID(c *gin.Context) (uint, error) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -180,11 +175,12 @@ var FollowUserEndpoint = models.Endpoint{
 	HandlerFunction: FollowUserHandler,
 }
 
-//	var UnfollowUserEndpoint = models.Endpoint{
-//		Method:          models.DELETE,
-//		Path:            constants.BASEURL + "unfollow/{userid}",
-//		HandlerFunction: UnfollowUserHandler,
-//	}
+var UnfollowUserEndpoint = models.Endpoint{
+	Method:          models.DELETE,
+	Path:            constants.BASEURL + "unfollow/:userid",
+	HandlerFunction: UnfollowUserHandler,
+}
+
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "signup",

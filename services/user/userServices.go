@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
@@ -224,6 +225,11 @@ func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 }
 
 func UpdateProfile(db *gorm.DB, user *models.User) error {
+	hashedPassword, hasedPasswordErr := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if hasedPasswordErr != nil {
+		return errors.New("failed to hash password")
+	}
+	user.Password = string(hashedPassword)
 	return db.Save(user).Error
 }
 
@@ -255,6 +261,19 @@ func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
 	}
 
 	return following, nil
+}
+
+func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
+	var post models.Post
+	err := db.Where("id = ? AND user_id = ?", postID, userID).First(&post).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false
+	} else if err != nil {
+		log.Printf("Error querying post by id: %v", err)
+		return false
+	}
+
+	return true
 }
 
 //	func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {

@@ -117,9 +117,17 @@ func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		postID, err := strconv.Atoi(c.Param("postid"))
-		if err != nil {
+		postID, atoiErr := strconv.Atoi(c.Param("postid"))
+		userID, _ := c.Get("userID")
+		currentUserID, _ := userID.(uint)
+
+		if atoiErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		if !user.IsPostOwner(db, currentUserID, uint(postID)) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
 			return
 		}
 
@@ -151,9 +159,17 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		postID, err := strconv.Atoi(c.Param("postid"))
-		if err != nil {
+		postID, atoiErr := strconv.Atoi(c.Param("postid"))
+		userID, _ := c.Get("userID")
+		currentUserID, _ := userID.(uint)
+
+		if atoiErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		if !user.IsPostOwner(db, currentUserID, uint(postID)) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
 			return
 		}
 

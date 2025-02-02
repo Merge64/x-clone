@@ -31,9 +31,17 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 // TODO: We need to finalize which method we are going to use to obtain this data.
 func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, atoiErr := strconv.Atoi(c.Param("userid"))
+		profileID, atoiErr := strconv.Atoi(c.Param("userid"))
+		userID, _ := c.Get("userID")
+		currentUserID, _ := userID.(uint)
+
 		if atoiErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		if currentUserID != uint(profileID) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not authorized to edit this profile"})
 			return
 		}
 
@@ -43,7 +51,7 @@ func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if currentUser.ID != uint(userID) {
+		if currentUser.ID != uint(profileID) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "User ID in URL does not match user ID in body"})
 			return
 		}

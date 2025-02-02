@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
@@ -70,25 +71,25 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
-	if !userExists(db, userID) {
-		return errors.New(constants.ERRNOUSER)
-	}
-
-	var currentUser models.Like
-	if isLiked(db, userID, parentID) {
-		db.Model(models.Like{}).First(&currentUser, "UserID = ? AND ParentID = ?", userID, parentID)
-		db.Model(models.Like{}).Delete(&currentUser)
-	} else {
-		db.Model(models.Like{}).Create(models.Like{
-			Model:    gorm.Model{},
-			ParentID: parentID,
-			UserID:   userID,
-		})
-	}
-
-	return nil
-}
+//	func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
+//		if !userExists(db, userID) {
+//			return errors.New(constants.ERRNOUSER)
+//		}
+//
+//		var currentUser models.Like
+//		if isLiked(db, userID, parentID) {
+//			db.Model(models.Like{}).First(&currentUser, "UserID = ? AND ParentID = ?", userID, parentID)
+//			db.Model(models.Like{}).Delete(&currentUser)
+//		} else {
+//			db.Model(models.Like{}).Create(models.Like{
+//				Model:    gorm.Model{},
+//				ParentID: parentID,
+//				UserID:   userID,
+//			})
+//		}
+//
+//		return nil
+//	}
 
 func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
 	var users []models.User
@@ -129,9 +130,6 @@ func GetAllPostsByUserID(db *gorm.DB, userID uint) ([]models.Post, error) {
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
 	}
-	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ERRNOPOST)
-	}
 
 	return posts, nil
 }
@@ -150,8 +148,7 @@ func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body st
 	return db.Create(&post).Error
 }
 
-// AUX.
-
+// // AUX.
 func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	var user models.User
 	err := db.Where("Mail = ?", mail).First(&user).Error
@@ -178,25 +175,24 @@ func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 	return true
 }
 
-func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
-	var user models.User
-
-	field := "Mail"
-	if !IsEmail(inputUser) {
-		field = "Username"
-	}
-	err := queryUserByField(db, field, inputUser, password, &user)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false
-		}
-		log.Printf("Error querying user by %s: %v", field, err)
-		return false
-	}
-
-	return true
-}
-
+//	func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
+//		var user models.User
+//
+//		field := "Mail"
+//		if !IsEmail(inputUser) {
+//			field = "Username"
+//		}
+//		err := queryUserByField(db, field, inputUser, password, &user)
+//		if err != nil {
+//			if errors.Is(err, gorm.ErrRecordNotFound) {
+//				return false
+//			}
+//			log.Printf("Error querying user by %s: %v", field, err)
+//			return false
+//		}
+//
+//		return true
+//	}
 func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
 	return re.MatchString(email)
@@ -229,6 +225,11 @@ func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 }
 
 func UpdateProfile(db *gorm.DB, user *models.User) error {
+	hashedPassword, hasedPasswordErr := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if hasedPasswordErr != nil {
+		return errors.New("failed to hash password")
+	}
+	user.Password = string(hashedPassword)
 	return db.Save(user).Error
 }
 
@@ -262,9 +263,22 @@ func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
 	return following, nil
 }
 
-func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
-	return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
+func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
+	var post models.Post
+	err := db.Where("id = ? AND user_id = ?", postID, userID).First(&post).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false
+	} else if err != nil {
+		log.Printf("Error querying post by id: %v", err)
+		return false
+	}
+
+	return true
 }
+
+//	func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
+//		return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
+//	}
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	var follow models.Follow
@@ -272,7 +286,6 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// No record found, the user does not follow
 			return false
 		}
 		log.Printf("Error querying database: %v", result.Error)
@@ -281,9 +294,9 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return true
 }
 
-func isLiked(db *gorm.DB, userID, parentID uint) bool {
-	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil
-}
+//	func isLiked(db *gorm.DB, userID, parentID uint) bool {
+//		return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil
+//	}
 
 func userExists(db *gorm.DB, userID uint) bool {
 	var user models.User

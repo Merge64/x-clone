@@ -98,11 +98,22 @@ func startServer() {
 	r.POST(controllers.FollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.FollowUserEndpoint.HandlerFunction(db))
 	r.DELETE(controllers.UnfollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.UnfollowUserEndpoint.HandlerFunction(db))
 
-	r.GET(controllers.ViewUserProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.ViewUserProfileEndpoint.HandlerFunction(db))
-	r.PUT(controllers.EditUserProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.EditUserProfileEndpoint.HandlerFunction(db))
-
 	r.GET(controllers.GetFollowersProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetFollowersProfileEndpoint.HandlerFunction(db))
 	r.GET(controllers.GetFollowingProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetFollowingProfileEndpoint.HandlerFunction(db))
+
+	r.PUT(controllers.EditUserProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.EditUserProfileEndpoint.HandlerFunction(db))
+	r.GET(controllers.ViewUserProfileEndpoint.Path, controllers.ViewUserProfileEndpoint.HandlerFunction(db))
+
+	r.GET(controllers.SearchUserEndpoint.Path, controllers.SearchUserEndpoint.HandlerFunction(db))
+	r.GET(controllers.SearchPostEndpoint.Path, controllers.SearchPostEndpoint.HandlerFunction(db))
+
+	r.POST(controllers.CreatePostEndpoint.Path, middleware.AuthMiddleware(db), controllers.CreatePostEndpoint.HandlerFunction(db))
+	r.PUT(controllers.EditPostEndpoint.Path, middleware.AuthMiddleware(db), controllers.EditPostEndpoint.HandlerFunction(db))
+	r.DELETE(controllers.DeletePostEndpoint.Path, middleware.AuthMiddleware(db), controllers.DeletePostEndpoint.HandlerFunction(db))
+
+	r.GET(controllers.GetSpecificPostEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetSpecificPostEndpoint.HandlerFunction(db))
+	r.GET(controllers.GetAllPostsByUserIDEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(db))
+	r.GET(controllers.GetAllPostsEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetAllPostsEndpoint.HandlerFunction(db))
 
 	err := r.Run()
 	if err != nil {

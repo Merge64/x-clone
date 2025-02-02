@@ -41,7 +41,7 @@ func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		if currentUserID != uint(profileID) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not authorized to edit this profile"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to edit this profile"})
 			return
 		}
 

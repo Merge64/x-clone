@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -110,11 +109,8 @@ func LoginHandlerGin(db *gorm.DB) gin.HandlerFunc {
 
 func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		followingID, getIDErr := getUserID(c)
-		if getIDErr != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
+		userID, _ := c.Get("userID")
+		followingID, _ := userID.(uint)
 
 		followedUserID, atoiErr := strconv.Atoi(c.Param("userid"))
 		if atoiErr != nil {
@@ -134,11 +130,8 @@ func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 
 func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		followingID, err := getUserID(c)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
+		userID, _ := c.Get("userID")
+		followingID, _ := userID.(uint)
 
 		followedUserID, atoiErr := strconv.Atoi(c.Param("userid"))
 		if atoiErr != nil {
@@ -154,19 +147,6 @@ func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{"message": "Unfollowed user successfully"})
 	}
-}
-
-func getUserID(c *gin.Context) (uint, error) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		return 0, errors.New("user ID not found")
-	}
-
-	if userIDUint, ok := userID.(uint); ok {
-		return userIDUint, nil
-	}
-
-	return 0, errors.New("invalid user ID format")
 }
 
 var FollowUserEndpoint = models.Endpoint{

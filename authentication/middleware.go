@@ -25,12 +25,10 @@ func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 			}
 			return []byte(os.Getenv("SECRET")), nil
 		})
-		if err != nil {
-			fmt.Println(err)
-		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			if float64(time.Now().Unix()) > claims["exp"].(float64) {
+			expDate, _ := claims["exp"].(float64)
+			if float64(time.Now().Unix()) > expDate {
 				c.AbortWithStatus(http.StatusUnauthorized)
 			}
 
@@ -40,16 +38,11 @@ func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 			if currentUser.ID == 0 {
 				c.AbortWithStatus(http.StatusUnauthorized)
 			}
-
-			c.Set("userID", uint(claims["sub"].(float64)))
+			userID, _ := claims["sub"].(float64)
+			c.Set("userID", uint(userID))
 			c.Next()
-
 		} else {
 			fmt.Println(err)
 		}
 	}
 }
-
-//func Validate(c *gin.Context) {
-//	user, _ := c.Get("userID")
-//}

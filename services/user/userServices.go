@@ -275,9 +275,9 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return true
 }
 
-//func isLiked(db *gorm.DB, userID, parentID uint) bool {
-//	return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil
-//}
+//	func isLiked(db *gorm.DB, userID, parentID uint) bool {
+//		return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil
+//	}
 
 func userExists(db *gorm.DB, userID uint) bool {
 	var user models.User

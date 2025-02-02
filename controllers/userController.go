@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -54,7 +54,7 @@ func SignUpHandlerGin(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if err := user.CreateAccount(db, username, string(hashedPassword), mail, locationAux); err != nil {
+		if createErr := user.CreateAccount(db, username, string(hashedPassword), mail, locationAux); createErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid parameters to create an account"})
 			return
 		}
@@ -92,7 +92,7 @@ func LoginHandlerGin(db *gorm.DB) gin.HandlerFunc {
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"sub": u.ID,
-			"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+			"exp": time.Now().Add(time.Hour * constants.EXPDATE).Unix(),
 		})
 
 		tokenString, err := token.SignedString([]byte(secretKey))
@@ -102,7 +102,7 @@ func LoginHandlerGin(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.SetSameSite(http.SameSiteLaxMode)
-		c.SetCookie("Authorization", tokenString, 3600, "/", "", false, true)
+		c.SetCookie("Authorization", tokenString, constants.MAXCOOKIEAGE, "/", "", false, true)
 
 		c.JSON(http.StatusOK, gin.H{"token": tokenString})
 	}
@@ -159,14 +159,14 @@ func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 func getUserID(c *gin.Context) (uint, error) {
 	userID, exists := c.Get("userID")
 	if !exists {
-		return 0, fmt.Errorf("user ID not found")
+		return 0, errors.New("user ID not found")
 	}
 
 	if userIDUint, ok := userID.(uint); ok {
 		return userIDUint, nil
 	}
 
-	return 0, fmt.Errorf("invalid user ID format")
+	return 0, errors.New("invalid user ID format")
 }
 
 var FollowUserEndpoint = models.Endpoint{

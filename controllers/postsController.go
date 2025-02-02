@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"main/constants"
@@ -9,64 +10,45 @@ import (
 	"main/services/user"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := c.Request.ParseForm(); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid form data"})
+		if parseErr := parseFormData(c); parseErr != nil {
+			sendErrorResponse(c, http.StatusBadRequest, parseErr.Error())
 			return
 		}
 
-		userIDStr, exists := c.Get("userID")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		userID, getUserIDerr := getUserIDFromContext(c)
+		if getUserIDerr != nil {
+			sendErrorResponse(c, http.StatusUnauthorized, getUserIDerr.Error())
 			return
 		}
 
-		parentIDStr := c.PostForm("parent")
-		quoteIDStr := c.PostForm("quote")
 		body := c.PostForm("body")
-
-		if body == constants.EMPTY {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Body cannot be empty"})
+		if err := validatePostBody(body); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		userID, ok := userIDStr.(uint)
-		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		parentID, optionalIDErr := parseOptionalID(c, "parent")
+		if optionalIDErr != nil {
+			sendErrorResponse(c, http.StatusBadRequest, optionalIDErr.Error())
 			return
 		}
 
-		var parentID, quoteID *uint
-		if parentIDStr != constants.EMPTY {
-			parsedParentID, parentErr := strconv.ParseUint(parentIDStr, 10, 32)
-			if parentErr != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent ID"})
-				return
-			}
-			tempParentID := uint(parsedParentID)
-			parentID = &tempParentID
+		quoteID, optionalIDErr := parseOptionalID(c, "quote")
+		if optionalIDErr != nil {
+			sendErrorResponse(c, http.StatusBadRequest, optionalIDErr.Error())
+			return
 		}
 
-		if quoteIDStr != constants.EMPTY {
-			parsedQuoteID, parsedErr := strconv.ParseUint(quoteIDStr, 10, 32)
-			if parsedErr != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid quote ID"})
+		if createPostErr := user.CreatePost(db, userID, parentID, quoteID, body); createPostErr != nil {
+			if createPostErr.Error() == constants.ERRNOUSER {
+				sendErrorResponse(c, http.StatusBadRequest, constants.ERRNOUSER)
 				return
 			}
-			tempQuoteID := uint(parsedQuoteID)
-			quoteID = &tempQuoteID
-		}
-
-		if err := user.CreatePost(db, userID, parentID, quoteID, body); err != nil {
-			if err.Error() == constants.ERRNOUSER {
-				c.JSON(http.StatusBadRequest, gin.H{"error": constants.ERRNOUSER})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to create post")
 			return
 		}
 
@@ -196,19 +178,51 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 //// AUX.
 
-// Extract postID from the URL.
-const pathSize = 3 // It will always be /posts/{postid}. a way to overcome this is using MUX
+func parseFormData(c *gin.Context) error {
+	if err := c.Request.ParseForm(); err != nil {
+		return errors.New("invalid form data")
+	}
+	return nil
+}
 
-func extractPostID(r *http.Request) (uint, error) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < pathSize {
-		return 0, errors.New("invalid URL format")
+func getUserIDFromContext(c *gin.Context) (uint, error) {
+	userIDStr, exists := c.Get("userID")
+	if !exists {
+		return 0, errors.New("unauthorized")
 	}
-	postID, err := strconv.Atoi(parts[2])
+
+	userID, ok := userIDStr.(uint)
+	if !ok {
+		return 0, errors.New("invalid user ID")
+	}
+
+	return userID, nil
+}
+
+func validatePostBody(body string) error {
+	if body == constants.EMPTY {
+		return errors.New("body cannot be empty")
+	}
+	return nil
+}
+
+func parseOptionalID(c *gin.Context, paramName string) (*uint, error) {
+	paramStr := c.PostForm(paramName)
+	if paramStr == constants.EMPTY {
+		return nil, errors.New(constants.ERRNOVALUE)
+	}
+
+	parsedID, err := strconv.ParseUint(paramStr, 10, 32)
 	if err != nil {
-		return 0, errors.New("invalid postid")
+		return nil, fmt.Errorf("invalid %s ID", paramName)
 	}
-	return uint(postID), nil
+
+	tempID := uint(parsedID)
+	return &tempID, nil
+}
+
+func sendErrorResponse(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{"error": message})
 }
 
 var GetAllPostsByUserIDEndpoint = models.Endpoint{

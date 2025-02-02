@@ -3,75 +3,19 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"log"
-	middleware "main/authentication"
 	"main/constants"
-	"main/controllers"
-	"main/models"
+	"main/startup"
 	"net/http"
 	"os"
 )
 
-func startDatabase() *gorm.DB {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-		return nil
-	}
-
-	host := os.Getenv("HOST")
-	user := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	dbname := os.Getenv("POSTGRES_DB")
-	port := os.Getenv("DATABASE_PORT")
-
-	envVariables := []string{host, user, password, dbname, port}
-
-	for _, envVar := range envVariables {
-		if envVar == constants.EMPTY {
-			log.Fatal("One or more database environment variables are not set")
-		}
-	}
-
-	// Database connection string
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, password, dbname, port)
-	// Open the database connection
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("failed to connect to the database: %v", err)
-	}
-
-	// Enable uuid-ossp extension
-	err = db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error
-	if err != nil {
-		log.Fatalf("failed to enable uuid-ossp extension: %v", err)
-	}
-
-	migrateSchemas(db)
-
-	return db
-}
-
-func createUserHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Use `db` inside this handler
-		c.JSON(http.StatusOK, gin.H{"message": "User created"})
-	}
-}
-
-func migrateSchemas(db *gorm.DB) {
-	err := db.AutoMigrate(&models.Post{}, &models.Follow{}, &models.Like{}, &models.User{})
-	if err != nil {
-		log.Fatalf("failed to migrate database: %v", err)
-	}
+func main() {
+	startServer()
 }
 
 func startServer() {
-	db := startDatabase()
+	db := startup.StartDatabase()
 
 	if db == nil {
 		fmt.Println("Error starting the database")
@@ -83,7 +27,6 @@ func startServer() {
 		return
 	}
 
-	// Defer its closing
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
@@ -91,117 +34,9 @@ func startServer() {
 		}
 	}(s)
 
-	r := gin.Default()
-	r.POST(controllers.UserSignUpEndpoint.Path, controllers.UserSignUpEndpoint.HandlerFunction(db))
-	r.POST(controllers.UserLoginEndpoint.Path, controllers.UserLoginEndpoint.HandlerFunction(db))
-
-	r.POST(controllers.FollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.FollowUserEndpoint.HandlerFunction(db))
-	r.DELETE(controllers.UnfollowUserEndpoint.Path, middleware.AuthMiddleware(db), controllers.UnfollowUserEndpoint.HandlerFunction(db))
-
-	r.GET(controllers.GetFollowersProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetFollowersProfileEndpoint.HandlerFunction(db))
-	r.GET(controllers.GetFollowingProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetFollowingProfileEndpoint.HandlerFunction(db))
-
-	r.PUT(controllers.EditUserProfileEndpoint.Path, middleware.AuthMiddleware(db), controllers.EditUserProfileEndpoint.HandlerFunction(db))
-	r.GET(controllers.ViewUserProfileEndpoint.Path, controllers.ViewUserProfileEndpoint.HandlerFunction(db))
-
-	r.GET(controllers.SearchUserEndpoint.Path, controllers.SearchUserEndpoint.HandlerFunction(db))
-	r.GET(controllers.SearchPostEndpoint.Path, controllers.SearchPostEndpoint.HandlerFunction(db))
-
-	r.POST(controllers.CreatePostEndpoint.Path, middleware.AuthMiddleware(db), controllers.CreatePostEndpoint.HandlerFunction(db))
-	r.PUT(controllers.EditPostEndpoint.Path, middleware.AuthMiddleware(db), controllers.EditPostEndpoint.HandlerFunction(db))
-	r.DELETE(controllers.DeletePostEndpoint.Path, middleware.AuthMiddleware(db), controllers.DeletePostEndpoint.HandlerFunction(db))
-
-	r.GET(controllers.GetSpecificPostEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetSpecificPostEndpoint.HandlerFunction(db))
-	r.GET(controllers.GetAllPostsByUserIDEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(db))
-	r.GET(controllers.GetAllPostsEndpoint.Path, middleware.AuthMiddleware(db), controllers.GetAllPostsEndpoint.HandlerFunction(db))
-
-	err := r.Run()
-	if err != nil {
+	if startRoutesErr := startup.StartRoutes(db); startRoutesErr != nil {
 		return
 	}
-
-	//// Here should go the functions for each endpoint
-	//// TODO: Implement a function that activates all the endpoints
-	//
-	//http.HandleFunc(controllers.UserSignUpEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.UserSignUpEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.UserLoginEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.UserLoginEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.SearchUserEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.SearchUserEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.SearchPostEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.SearchPostEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.CreatePostEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.CreatePostEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.GetSpecificPostEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.GetSpecificPostEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.EditPostEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.EditPostEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.DeletePostEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.DeletePostEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.GetAllPostsEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.GetAllPostsEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.GetAllPostsByUserIDEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.ViewUserProfileEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.ViewUserProfileEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.GetFollowersProfileEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.GetFollowersProfileEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.GetFollowingProfileEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.GetFollowingProfileEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.EditUserProfileEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.EditUserProfileEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.FollowUserEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.FollowUserEndpoint.HandlerFunction(writer, request, db)
-	//	})
-	//
-	//http.HandleFunc(controllers.UnfollowUserEndpoint.Path,
-	//	func(writer http.ResponseWriter, request *http.Request) {
-	//		controllers.UnfollowUserEndpoint.HandlerFunction(writer, request, db)
-	//	})
 
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == constants.EMPTY {
@@ -213,8 +48,4 @@ func startServer() {
 	if serverError != nil {
 		return
 	}
-}
-
-func main() {
-	startServer()
 }

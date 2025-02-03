@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"main/constants"
-	"main/models"
 	"main/services/user"
 	"net/http"
 )
@@ -43,16 +42,4 @@ func SearchPostHandler(db *gorm.DB) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{"posts": posts})
 	}
-}
-
-var SearchUserEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "search/:username",
-	HandlerFunction: SearchUserHandler,
-}
-
-var SearchPostEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "posts",
-	HandlerFunction: SearchPostHandler,
 }

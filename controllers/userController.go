@@ -149,26 +149,28 @@ func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-var FollowUserEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "follow/:userid",
-	HandlerFunction: FollowUserHandler,
-}
+func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, _ := c.Get("userID")
+		likerID, _ := userID.(uint)
 
-var UnfollowUserEndpoint = models.Endpoint{
-	Method:          models.DELETE,
-	Path:            constants.BASEURL + "unfollow/:userid",
-	HandlerFunction: UnfollowUserHandler,
-}
+		postID, atoiErr := strconv.Atoi(c.Param("postid"))
+		if atoiErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
 
-var UserSignUpEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "signup",
-	HandlerFunction: SignUpHandlerGin,
-}
+		toggleResult, toggleErr := user.ToggleLike(db, likerID, uint(postID))
+		if toggleErr != nil {
+			log.Println("Toggle Like error:", toggleErr)
+			if toggleResult.IsLiked {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to like post"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unlike post"})
+			}
+			return
+		}
 
-var UserLoginEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "login",
-	HandlerFunction: LoginHandlerGin,
+		c.JSON(http.StatusOK, gin.H{"message": toggleResult.MessageStatus})
+	}
 }

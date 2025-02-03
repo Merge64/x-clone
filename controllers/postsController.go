@@ -240,39 +240,3 @@ func parseOptionalID(c *gin.Context, paramName string) (*uint, error) {
 func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, gin.H{"error": message})
 }
-
-var GetAllPostsByUserIDEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "/profile/:userid/posts",
-	HandlerFunction: GetPostsByUserIDHandler,
-}
-
-var GetAllPostsEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "posts/all",
-	HandlerFunction: GetAllPostsHandler,
-}
-
-var GetSpecificPostEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "posts/:postid",
-	HandlerFunction: GetSpecificPostHandler,
-}
-
-var DeletePostEndpoint = models.Endpoint{
-	Method:          models.DELETE,
-	Path:            constants.BASEURL + "posts/:postid/delete",
-	HandlerFunction: DeletePostHandler,
-}
-
-var EditPostEndpoint = models.Endpoint{
-	Method:          models.PUT,
-	Path:            constants.BASEURL + "posts/:postid/edit",
-	HandlerFunction: EditPostHandler,
-}
-
-var CreatePostEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "posts/create",
-	HandlerFunction: CreatePostHandler,
-}

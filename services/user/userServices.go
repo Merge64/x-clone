@@ -71,25 +71,37 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-//	func ToggleLike(db *gorm.DB, userID uint, parentID uint) error {
-//		if !userExists(db, userID) {
-//			return errors.New(constants.ERRNOUSER)
-//		}
-//
-//		var currentUser models.Like
-//		if isLiked(db, userID, parentID) {
-//			db.Model(models.Like{}).First(&currentUser, "UserID = ? AND ParentID = ?", userID, parentID)
-//			db.Model(models.Like{}).Delete(&currentUser)
-//		} else {
-//			db.Model(models.Like{}).Create(models.Like{
-//				Model:    gorm.Model{},
-//				ParentID: parentID,
-//				UserID:   userID,
-//			})
-//		}
-//
-//		return nil
-//	}
+func ToggleLike(db *gorm.DB, userID uint, parentID uint) (ToggleInfo, error) {
+	if !userExists(db, userID) {
+		return ToggleInfo{}, errors.New(constants.ERRNOUSER)
+	}
+
+	var toggleResult ToggleInfo
+	var currentUser models.Like
+	if isLiked(db, userID, parentID) {
+		db.Model(models.Like{}).First(&currentUser, "user_id = ? AND parent_id = ?", userID, parentID)
+		db.Model(models.Like{}).Delete(&currentUser)
+
+		toggleResult = ToggleInfo{
+			IsLiked:       false,
+			MessageStatus: "unliked post successfully",
+		}
+	} else {
+		currentUser = models.Like{
+			Model:    gorm.Model{},
+			ParentID: parentID,
+			UserID:   userID,
+		}
+		db.Model(models.Like{}).Create(&currentUser)
+
+		toggleResult = ToggleInfo{
+			IsLiked:       true,
+			MessageStatus: "liked post successfully",
+		}
+	}
+
+	return toggleResult, nil
+}
 
 func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
 	var users []models.User
@@ -148,7 +160,13 @@ func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body st
 	return db.Create(&post).Error
 }
 
-// // AUX.
+// AUX.
+
+type ToggleInfo struct {
+	IsLiked       bool
+	MessageStatus string
+}
+
 func MailAlreadyUsed(db *gorm.DB, mail string) bool {
 	var user models.User
 	err := db.Where("Mail = ?", mail).First(&user).Error
@@ -294,9 +312,21 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return true
 }
 
-//	func isLiked(db *gorm.DB, userID, parentID uint) bool {
-//		return db.Model(models.Like{}).Where("UserID = ? AND ParentID = ?", userID, parentID).Error == nil
-//	}
+func isLiked(db *gorm.DB, userID, parentID uint) bool {
+	result := db.Model(models.Like{}).Where("user_id = ? AND parent_id = ?", userID, parentID).First(&models.Like{})
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return false
+		}
+		log.Printf("Error querying database: %v", result.Error)
+		return false
+	}
+	if result.RowsAffected == 0 {
+		return false
+	}
+
+	return true
+}
 
 func userExists(db *gorm.DB, userID uint) bool {
 	var user models.User

@@ -3,7 +3,6 @@ package controllers
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"main/constants"
 	"main/models"
 	"main/services/user"
 	"net/http"
@@ -102,27 +101,3 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 }
 
 //// ----------------------------- AUX ----------------------------- //
-
-var GetFollowersProfileEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "profile/followers/user/:userid",
-	HandlerFunction: GetFollowersProfileHandler,
-}
-
-var GetFollowingProfileEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "profile/following/user/:userid",
-	HandlerFunction: GetFollowingProfileHandler,
-}
-
-var ViewUserProfileEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.BASEURL + "profile/:userid",
-	HandlerFunction: ViewUserProfileHandler,
-}
-
-var EditUserProfileEndpoint = models.Endpoint{
-	Method:          models.PUT,
-	Path:            constants.BASEURL + "profile/:userid/edit",
-	HandlerFunction: EditUserProfileHandler,
-}

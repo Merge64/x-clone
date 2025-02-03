@@ -19,31 +19,17 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 	public := router.Group("/")
 	{
-		public.POST(controllers.UserSignUpEndpoint.Path, controllers.UserSignUpEndpoint.HandlerFunction(db))
-		public.POST(controllers.UserLoginEndpoint.Path, controllers.UserLoginEndpoint.HandlerFunction(db))
-
-		public.GET(controllers.ViewUserProfileEndpoint.Path, controllers.ViewUserProfileEndpoint.HandlerFunction(db))
-
-		public.GET(controllers.SearchUserEndpoint.Path, controllers.SearchUserEndpoint.HandlerFunction(db))
-		public.GET(controllers.SearchPostEndpoint.Path, controllers.SearchPostEndpoint.HandlerFunction(db))
+		for _, endpoint := range controllers.PublicEndpoints {
+			public.Handle(endpoint.Method, endpoint.Path, endpoint.HandlerFunction(db))
+		}
 	}
 
 	auth := router.Group("/")
 	auth.Use(middleware.AuthMiddleware(db))
 	{
-		auth.POST(controllers.FollowUserEndpoint.Path, controllers.FollowUserEndpoint.HandlerFunction(db))
-		auth.DELETE(controllers.UnfollowUserEndpoint.Path, controllers.UnfollowUserEndpoint.HandlerFunction(db))
-		auth.GET(controllers.GetFollowersProfileEndpoint.Path, controllers.GetFollowersProfileEndpoint.HandlerFunction(db))
-		auth.GET(controllers.GetFollowingProfileEndpoint.Path, controllers.GetFollowingProfileEndpoint.HandlerFunction(db))
-
-		auth.PUT(controllers.EditUserProfileEndpoint.Path, controllers.EditUserProfileEndpoint.HandlerFunction(db))
-
-		auth.POST(controllers.CreatePostEndpoint.Path, controllers.CreatePostEndpoint.HandlerFunction(db))
-		auth.PUT(controllers.EditPostEndpoint.Path, controllers.EditPostEndpoint.HandlerFunction(db))
-		auth.DELETE(controllers.DeletePostEndpoint.Path, controllers.DeletePostEndpoint.HandlerFunction(db))
-		auth.GET(controllers.GetSpecificPostEndpoint.Path, controllers.GetSpecificPostEndpoint.HandlerFunction(db))
-		auth.GET(controllers.GetAllPostsByUserIDEndpoint.Path, controllers.GetAllPostsByUserIDEndpoint.HandlerFunction(db))
-		auth.GET(controllers.GetAllPostsEndpoint.Path, controllers.GetAllPostsEndpoint.HandlerFunction(db))
+		for _, endpoint := range controllers.PrivateEndpoints {
+			auth.Handle(endpoint.Method, endpoint.Path, endpoint.HandlerFunction(db))
+		}
 	}
 
 	return router

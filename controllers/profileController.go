@@ -27,31 +27,15 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-// TODO: We need to finalize which method we are going to use to obtain this data.
 func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		profileID, atoiErr := strconv.Atoi(c.Param("userid"))
 		userID, _ := c.Get("userID")
-		currentUserID, _ := userID.(uint)
-
-		if atoiErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-			return
-		}
-
-		if currentUserID != uint(profileID) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to edit this profile"})
-			return
-		}
+		profileID, _ := userID.(uint)
 
 		var currentUser models.User
+		currentUser.ID = profileID
 		if decodeErr := c.ShouldBindJSON(&currentUser); decodeErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user data"})
-			return
-		}
-
-		if currentUser.ID != uint(profileID) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "User ID in URL does not match user ID in body"})
 			return
 		}
 
@@ -99,5 +83,3 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": following})
 	}
 }
-
-//// ----------------------------- AUX ----------------------------- //

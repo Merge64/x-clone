@@ -98,13 +98,37 @@ var UnfollowUserEndpoint = models.Endpoint{
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "signup",
-	HandlerFunction: SignUpHandlerGin,
+	HandlerFunction: SignUpHandler,
 }
 
 var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.BASEURL + "login",
-	HandlerFunction: LoginHandlerGin,
+	HandlerFunction: LoginHandler,
+}
+
+var UserLogoutEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "logout",
+	HandlerFunction: LogoutHandler,
+}
+
+var SendDirectMessageEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "conversations/users/:userid/message",
+	HandlerFunction: SendMessageHandler,
+}
+
+var ListConversationsEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "conversations/listall",
+	HandlerFunction: ListConversationsHandler,
+}
+
+var GetConversationMessagesEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.BASEURL + "conversations/:conversationID/messages",
+	HandlerFunction: GetMessagesForConversationHandler,
 }
 
 var PublicEndpoints = []models.Endpoint{
@@ -128,4 +152,8 @@ var PrivateEndpoints = []models.Endpoint{
 	EditPostEndpoint,
 	DeletePostEndpoint,
 	ToggleLikeEndPoint,
+	SendDirectMessageEndpoint,
+	ListConversationsEndpoint,
+	GetConversationMessagesEndpoint,
+	UserLogoutEndpoint,
 }

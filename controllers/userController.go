@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func SignUpHandlerGin(db *gorm.DB) gin.HandlerFunc {
+func SignUpHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var locationAux *string
 		username := c.PostForm("username")
@@ -62,7 +62,7 @@ func SignUpHandlerGin(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-func LoginHandlerGin(db *gorm.DB) gin.HandlerFunc {
+func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		usernameOrEmail := c.PostForm("username-or-email")
 		password := c.PostForm("password")
@@ -104,6 +104,13 @@ func LoginHandlerGin(db *gorm.DB) gin.HandlerFunc {
 		c.SetCookie("Authorization", tokenString, constants.MAXCOOKIEAGE, "/", "", false, true)
 
 		c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	}
+}
+
+func LogoutHandler(_ *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.SetCookie("Authorization", "", -1, "/", "", false, true)
+		c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 	}
 }
 
@@ -172,5 +179,94 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": toggleResult.MessageStatus})
+	}
+}
+
+func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		senderVal, _ := c.Get("userID")
+		senderID, ok := senderVal.(uint)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid userID in context"})
+			return
+		}
+
+		receiverStr := c.Param("userid")
+		receiverInt, err := strconv.Atoi(receiverStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+			return
+		}
+		receiverID := uint(receiverInt)
+
+		message := c.PostForm("message")
+		if message == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Message content cannot be empty"})
+			return
+		}
+
+		if errMsg := user.SendMessage(db, senderID, receiverID, message); errMsg != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not send message"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Message sent successfully"})
+	}
+}
+
+func ListConversationsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUserVal, _ := c.Get("userID")
+		currentUserID, _ := currentUserVal.(uint)
+
+		type ConvID struct {
+			ID uint `json:"id"`
+		}
+		var conversationIDs []ConvID
+
+		if err := db.Model(&models.Conversation{}).
+			Select("ID").
+			Where("sender_id = ? OR receiver_id = ?", currentUserID, currentUserID).
+			Scan(&conversationIDs).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversation IDs"})
+			return
+		}
+
+		c.JSON(http.StatusOK, conversationIDs)
+	}
+}
+
+func GetMessagesForConversationHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUserVal, _ := c.Get("userID")
+		currentUserID, _ := currentUserVal.(uint)
+
+		convoIDStr := c.Param("conversationID")
+		convoIDInt, err := strconv.Atoi(convoIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})
+			return
+		}
+		convoID := uint(convoIDInt)
+
+		var conversation models.Conversation
+		if errDB := db.First(&conversation, convoID).Error; errDB != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+			return
+		}
+		if conversation.SenderID != currentUserID && conversation.ReceiverID != currentUserID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You are not a participant in this conversation"})
+			return
+		}
+
+		var messages []models.Message
+		if errDB := db.Where("conversation_id = ?", conversation.ID).
+			Order("created_at asc").
+			Find(&messages).Error; errDB != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve messages"})
+			return
+		}
+
+		c.JSON(http.StatusOK, messages)
 	}
 }

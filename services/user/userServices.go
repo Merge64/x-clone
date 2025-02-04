@@ -340,3 +340,41 @@ func userExists(db *gorm.DB, userID uint) bool {
 
 	return true
 }
+
+func FindOrCreateConversation(db *gorm.DB, currentSenderID, currentReceiverID uint) (*models.Conversation, error) {
+	var convo models.Conversation
+	err := db.Where("sender_id = ? AND receiver_id = ?", currentSenderID, currentReceiverID).First(&convo).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			convo = models.Conversation{
+				SenderID:   currentSenderID,
+				ReceiverID: currentReceiverID,
+			}
+			if createErr := db.Create(&convo).Error; createErr != nil {
+				return nil, createErr
+			}
+			return &convo, nil
+		}
+		return nil, err
+	}
+	return &convo, nil
+}
+
+func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content string) error {
+	if currentSenderID == 0 || currentReceiverID == 0 {
+		return errors.New("invalid sender or receiver ID")
+	}
+	if content == constants.EMPTY {
+		return errors.New("message content cannot be empty")
+	}
+	convo, err := FindOrCreateConversation(db, currentSenderID, currentReceiverID)
+	if err != nil {
+		return err
+	}
+	message := models.Message{
+		ConversationID: convo.ID,
+		SenderID:       currentSenderID,
+		Content:        content,
+	}
+	return db.Create(&message).Error
+}

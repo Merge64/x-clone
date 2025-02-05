@@ -78,7 +78,13 @@ func StartDatabase() *gorm.DB {
 }
 
 func migrateSchemas(db *gorm.DB) {
-	err := db.AutoMigrate(&models.Post{}, &models.Follow{}, &models.Like{}, &models.User{})
+	err := db.AutoMigrate(&models.Post{},
+		&models.Follow{},
+		&models.Like{},
+		&models.User{},
+		&models.Conversation{},
+		&models.Message{},
+	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}

@@ -200,7 +200,7 @@ func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
 		receiverID := uint(receiverInt)
 
 		message := c.PostForm("message")
-		if message == "" {
+		if message == constants.EMPTY {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Message content cannot be empty"})
 			return
 		}

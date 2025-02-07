@@ -37,8 +37,7 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		quote := constants.EMPTY
-
+		var quote *string // its empty when created
 		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
 			if createPostErr.Error() == constants.ERRNOUSER {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ERRNOUSER)
@@ -203,12 +202,8 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		userIDVal, exists := c.Get("userID")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
-		currentUserID := userIDVal.(uint)
+		userIDVal, _ := c.Get("userID")
+		currentUserID, _ := userIDVal.(uint)
 
 		var req struct {
 			Quote string `json:"quote"`

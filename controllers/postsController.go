@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"main/constants"
@@ -31,13 +30,8 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		parentID, optionalIDErr := parseOptionalID(c, "parent")
-		if optionalIDErr != nil {
-			sendErrorResponse(c, http.StatusBadRequest, optionalIDErr.Error())
-			return
-		}
-
 		var quote *string // its empty when created
+		var parentID *uint
 		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
 			if createPostErr.Error() == constants.ERRNOUSER {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ERRNOUSER)
@@ -195,6 +189,7 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Parse the parent post id from the URL parameter.
 		parentIDStr := c.Param("parentid")
 		parentID, err := strconv.Atoi(parentIDStr)
 		if err != nil {
@@ -202,8 +197,13 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Get the current user's id from the context.
 		userIDVal, _ := c.Get("userID")
-		currentUserID, _ := userIDVal.(uint)
+		currentUserID, ok := userIDVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+			return
+		}
 
 		var req struct {
 			Quote string `json:"quote"`
@@ -219,15 +219,16 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 5. Flatten the repost chain:
-		//    If the parent post is itself a repost (i.e. it has a ParentID), then
-		//    fetch the original post from which it was reposted, as x.com does.
-		if parentPost.ParentID != nil {
-			// Logically, we’re now reposting the original content.
-			if errDB := db.First(&parentPost, *parentPost.ParentID).Error; errDB != nil {
+		// Flatten the repost chain:
+		// If the parent post is itself a repost (i.e. it has a ParentID),
+		// then we want to fetch the original post.
+		if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
+			var originalPost models.Post
+			if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
 				return
 			}
+			parentPost = originalPost
 		}
 
 		repost := models.Post{
@@ -279,21 +280,6 @@ func validatePostBody(body string) error {
 		return errors.New("body cannot be empty")
 	}
 	return nil
-}
-
-func parseOptionalID(c *gin.Context, paramName string) (*uint, error) {
-	paramStr := c.PostForm(paramName)
-	if paramStr == constants.EMPTY {
-		return nil, errors.New(constants.ERRNOVALUE)
-	}
-
-	parsedID, err := strconv.ParseUint(paramStr, 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("invalid %s ID", paramName)
-	}
-
-	tempID := uint(parsedID)
-	return &tempID, nil
 }
 
 func sendErrorResponse(c *gin.Context, statusCode int, message string) {

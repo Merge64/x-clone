@@ -41,6 +41,12 @@ var CreatePostEndpoint = models.Endpoint{
 	HandlerFunction: CreatePostHandler,
 }
 
+var CreateRepostEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "/posts/:parentid/repost",
+	HandlerFunction: CreateRepostHandler,
+}
+
 var GetFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "profile/followers/user/:userid",
@@ -156,4 +162,5 @@ var PrivateEndpoints = []models.Endpoint{
 	ListConversationsEndpoint,
 	GetConversationMessagesEndpoint,
 	UserLogoutEndpoint,
+	CreateRepostEndpoint,
 }

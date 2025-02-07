@@ -37,13 +37,9 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		quoteID, optionalIDErr := parseOptionalID(c, "quote")
-		if optionalIDErr != nil {
-			sendErrorResponse(c, http.StatusBadRequest, optionalIDErr.Error())
-			return
-		}
+		quote := constants.EMPTY
 
-		if createPostErr := user.CreatePost(db, userID, parentID, quoteID, body); createPostErr != nil {
+		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
 			if createPostErr.Error() == constants.ERRNOUSER {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ERRNOUSER)
 				return
@@ -147,6 +143,12 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
+		// If this post is a repost (has a ParentID), do not allow editing the body. forbidden
+		if post.ParentID != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
+			return
+		}
+
 		post.Body = body
 		if db.Save(&post).Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
@@ -189,6 +191,68 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
+	}
+}
+
+func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentIDStr := c.Param("parentid")
+		parentID, err := strconv.Atoi(parentIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post id"})
+			return
+		}
+
+		userIDVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		currentUserID := userIDVal.(uint)
+
+		var req struct {
+			Quote string `json:"quote"`
+		}
+		if errJSON := c.ShouldBindJSON(&req); errJSON != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
+			return
+		}
+
+		var parentPost models.Post
+		if errDB := db.First(&parentPost, parentID).Error; errDB != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
+			return
+		}
+
+		// 5. Flatten the repost chain:
+		//    If the parent post is itself a repost (i.e. it has a ParentID), then
+		//    fetch the original post from which it was reposted, as x.com does.
+		if parentPost.ParentID != nil {
+			// Logically, we’re now reposting the original content.
+			if errDB := db.First(&parentPost, *parentPost.ParentID).Error; errDB != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
+				return
+			}
+		}
+
+		repost := models.Post{
+			UserID:   currentUserID,
+			ParentID: &parentPost.ID,
+			Body:     parentPost.Body,
+		}
+		if req.Quote != "" {
+			repost.Quote = &req.Quote
+		}
+
+		if errDB := db.Create(&repost).Error; errDB != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create repost"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Repost created successfully",
+			"post":    repost,
+		})
 	}
 }
 

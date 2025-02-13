@@ -39,7 +39,7 @@ func startServer() {
 	}
 
 	serverPort := os.Getenv("SERVER_PORT")
-	if serverPort == constants.EMPTY {
+	if serverPort == constants.Empty {
 		log.Panic("serverPort environment variable is not set")
 	}
 

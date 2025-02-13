@@ -7,133 +7,133 @@ import (
 
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "i/flow/signup",
+	Path:            constants.InitialUrlAuth + "signup",
 	HandlerFunction: SignUpHandler,
 }
 
 var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "i/flow/login",
+	Path:            constants.InitialUrlAuth + "login",
 	HandlerFunction: LoginHandler,
 }
 
 var UserLogoutEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "i/flow/logout",
+	Path:            constants.InitialUrlAuth + "logout",
 	HandlerFunction: LogoutHandler,
 }
 
 var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "/profile/:userid/posts",
+	Path:            constants.InitialUrl + "/profile/:userid/posts",
 	HandlerFunction: GetPostsByUserIDHandler,
 }
 
 var GetAllPostsEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "posts/all",
+	Path:            constants.InitialUrl + "posts/all",
 	HandlerFunction: GetAllPostsHandler,
 }
 
 var GetSpecificPostEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "posts/:postid",
+	Path:            constants.InitialUrl + "posts/:postid",
 	HandlerFunction: GetSpecificPostHandler,
 }
 
 var DeletePostEndpoint = models.Endpoint{
 	Method:          models.DELETE,
-	Path:            constants.BASEURL + "posts/:postid/delete",
+	Path:            constants.InitialUrl + "posts/:postid/delete",
 	HandlerFunction: DeletePostHandler,
 }
 
 var EditPostEndpoint = models.Endpoint{
 	Method:          models.PUT,
-	Path:            constants.BASEURL + "posts/:postid/edit",
+	Path:            constants.InitialUrl + "posts/:postid/edit",
 	HandlerFunction: EditPostHandler,
 }
 
 var CreatePostEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "posts/create",
+	Path:            constants.InitialUrl + "posts/create",
 	HandlerFunction: CreatePostHandler,
 }
 
 var CreateRepostEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "/posts/:parentid/repost",
+	Path:            constants.InitialUrl + "/posts/:parentid/repost",
 	HandlerFunction: CreateRepostHandler,
 }
 
 var GetFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "profile/followers/user/:userid",
+	Path:            constants.InitialUrl + "profile/followers/user/:userid",
 	HandlerFunction: GetFollowersProfileHandler,
 }
 
 var GetFollowingProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "profile/following/user/:userid",
+	Path:            constants.InitialUrl + "profile/following/user/:userid",
 	HandlerFunction: GetFollowingProfileHandler,
 }
 
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "profile/:userid",
+	Path:            constants.InitialUrl + "profile/:userid",
 	HandlerFunction: ViewUserProfileHandler,
 }
 
 var EditUserProfileEndpoint = models.Endpoint{
 	Method:          models.PUT,
-	Path:            constants.BASEURL + "profile/:userid/edit",
+	Path:            constants.InitialUrl + "profile/:userid/edit",
 	HandlerFunction: EditUserProfileHandler,
 }
 
 var SearchUserEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "search/:username",
+	Path:            constants.InitialUrl + "search/:username",
 	HandlerFunction: SearchUserHandler,
 }
 
 var SearchPostEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "posts",
+	Path:            constants.InitialUrl + "posts",
 	HandlerFunction: SearchPostHandler,
 }
 
 var ToggleLikeEndPoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "togglelike/:postid",
+	Path:            constants.InitialUrl + "togglelike/:postid",
 	HandlerFunction: ToggleLikeHandler,
 }
 
 var FollowUserEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "follow/:userid",
+	Path:            constants.InitialUrl + "follow/:userid",
 	HandlerFunction: FollowUserHandler,
 }
 
 var UnfollowUserEndpoint = models.Endpoint{
 	Method:          models.DELETE,
-	Path:            constants.BASEURL + "unfollow/:userid",
+	Path:            constants.InitialUrl + "unfollow/:userid",
 	HandlerFunction: UnfollowUserHandler,
 }
 
 var SendDirectMessageEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.BASEURL + "conversations/users/:userid/message",
+	Path:            constants.InitialUrl + "conversations/users/:userid/message",
 	HandlerFunction: SendMessageHandler,
 }
 
 var ListConversationsEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "conversations/listall",
+	Path:            constants.InitialUrl + "conversations/listall",
 	HandlerFunction: ListConversationsHandler,
 }
 
 var GetConversationMessagesEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.BASEURL + "conversations/:conversationID/messages",
+	Path:            constants.InitialUrl + "conversations/:conversationID/messages",
 	HandlerFunction: GetMessagesForConversationHandler,
 }
 

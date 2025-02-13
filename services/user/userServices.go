@@ -12,7 +12,7 @@ import (
 )
 
 func CreateAccount(db *gorm.DB, username, password, mail string, location *string) error {
-	if password == constants.EMPTY || username == constants.EMPTY {
+	if password == constants.Empty || username == constants.Empty {
 		return errors.New("fields must not be empty")
 	}
 
@@ -73,7 +73,7 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 
 func ToggleLike(db *gorm.DB, userID uint, parentID uint) (ToggleInfo, error) {
 	if !userExists(db, userID) {
-		return ToggleInfo{}, errors.New(constants.ERRNOUSER)
+		return ToggleInfo{}, errors.New(constants.ErrNoUser)
 	}
 
 	var toggleResult ToggleInfo
@@ -107,7 +107,7 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
 	var users []models.User
 	result := db.Where("Username LIKE ?", username).First(&users)
 	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ERRNOUSER)
+		return nil, errors.New(constants.ErrNoUser)
 	}
 	return users, nil
 }
@@ -116,7 +116,7 @@ func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
 	var posts []models.Post
 	result := db.Where("Body ILIKE ?", "%"+keyword+"%").Find(&posts)
 	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf(constants.ERRNOPOST+" keyword used: %s", keyword)
+		return nil, fmt.Errorf(constants.ErrNoPost+" keyword used: %s", keyword)
 	}
 
 	return posts, nil
@@ -130,7 +130,7 @@ func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ERRNOPOST)
+		return nil, errors.New(constants.ErrNoPost)
 	}
 
 	return posts, nil
@@ -148,7 +148,7 @@ func GetAllPostsByUserID(db *gorm.DB, userID uint) ([]models.Post, error) {
 
 func CreatePost(db *gorm.DB, userID uint, parentID *uint, quote *string, body string) error {
 	if !userExists(db, userID) {
-		return errors.New(constants.ERRNOUSER)
+		return errors.New(constants.ErrNoUser)
 	}
 	post := models.Post{
 		UserID:   userID,
@@ -212,7 +212,7 @@ func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 //		return true
 //	}
 func IsEmail(email string) bool {
-	re := regexp.MustCompile(constants.EMAILREGEXPATTERNS)
+	re := regexp.MustCompile(constants.EmailRegexPatterns)
 	return re.MatchString(email)
 }
 
@@ -221,7 +221,7 @@ func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
 	err := db.First(&user, userID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return user, errors.New(constants.ERRNOUSER)
+			return user, errors.New(constants.ErrNoUser)
 		}
 		return user, errors.New("failed to retrieve the user from the database")
 	}
@@ -234,7 +234,7 @@ func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 	err := db.First(&post, postID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return post, errors.New(constants.ERRNOPOST)
+			return post, errors.New(constants.ErrNoPost)
 		}
 		return post, errors.New("failed to retrieve the post from the database")
 	}
@@ -364,7 +364,7 @@ func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content s
 	if currentSenderID == 0 || currentReceiverID == 0 {
 		return errors.New("invalid sender or receiver ID")
 	}
-	if content == constants.EMPTY {
+	if content == constants.Empty {
 		return errors.New("message content cannot be empty")
 	}
 	convo, err := FindOrCreateConversation(db, currentSenderID, currentReceiverID)

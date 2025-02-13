@@ -11,14 +11,14 @@ import (
 func SearchUserHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
-		if username == constants.EMPTY {
+		if username == constants.Empty {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'username' parameter"})
 			return
 		}
 
 		users, err := user.SearchUserByUsername(db, username)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": constants.ERRNOUSER})
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoUser})
 			return
 		}
 
@@ -29,7 +29,7 @@ func SearchUserHandler(db *gorm.DB) gin.HandlerFunc {
 func SearchPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		keyword := c.Query("search")
-		if keyword == constants.EMPTY {
+		if keyword == constants.Empty {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'search' query parameter"})
 			return
 		}

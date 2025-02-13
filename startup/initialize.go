@@ -17,18 +17,18 @@ import (
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	router := gin.Default()
 
-	public := router.Group("/")
+	public := router.Group("/api")
 	{
 		for _, endpoint := range controllers.PublicEndpoints {
 			public.Handle(endpoint.Method, endpoint.Path, endpoint.HandlerFunction(db))
 		}
 	}
 
-	auth := router.Group("/")
-	auth.Use(middleware.AuthMiddleware(db))
+	private := router.Group("/")
+	private.Use(middleware.AuthMiddleware(db))
 	{
 		for _, endpoint := range controllers.PrivateEndpoints {
-			auth.Handle(endpoint.Method, endpoint.Path, endpoint.HandlerFunction(db))
+			private.Handle(endpoint.Method, endpoint.Path, endpoint.HandlerFunction(db))
 		}
 	}
 
@@ -55,7 +55,7 @@ func StartDatabase() *gorm.DB {
 	envVariables := []string{host, user, password, dbname, port}
 
 	for _, envVar := range envVariables {
-		if envVar == constants.EMPTY {
+		if envVar == constants.Empty {
 			log.Fatal("One or more database environment variables are not set")
 		}
 	}

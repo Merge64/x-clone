@@ -33,8 +33,8 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 		var quote *string // its empty when created
 		var parentID *uint
 		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
-			if createPostErr.Error() == constants.ERRNOUSER {
-				sendErrorResponse(c, http.StatusBadRequest, constants.ERRNOUSER)
+			if createPostErr.Error() == constants.ErrNoUser {
+				sendErrorResponse(c, http.StatusBadRequest, constants.ErrNoUser)
 				return
 			}
 			sendErrorResponse(c, http.StatusInternalServerError, "Failed to create post")
@@ -93,7 +93,7 @@ func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
 		var post models.Post
 		if err := db.First(&post, postID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": constants.ERRNOPOST})
+				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
@@ -121,7 +121,7 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		body := c.PostForm("body")
-		if body == constants.EMPTY {
+		if body == constants.Empty {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Body cannot be empty"})
 			return
 		}
@@ -129,7 +129,7 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 		post, getPostErr := user.GetPostByID(db, uint(postID))
 		if getPostErr != nil {
 			if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": constants.ERRNOPOST})
+				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
@@ -171,7 +171,7 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 		post, getPostErr := user.GetPostByID(db, uint(postID))
 		if getPostErr != nil {
 			if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": constants.ERRNOPOST})
+				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
@@ -236,7 +236,7 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			ParentID: &parentPost.ID,
 			Body:     parentPost.Body,
 		}
-		if req.Quote != constants.EMPTY {
+		if req.Quote != constants.Empty {
 			repost.Quote = &req.Quote
 		}
 
@@ -276,7 +276,7 @@ func getUserIDFromContext(c *gin.Context) (uint, error) {
 }
 
 func validatePostBody(body string) error {
-	if body == constants.EMPTY {
+	if body == constants.Empty {
 		return errors.New("body cannot be empty")
 	}
 	return nil

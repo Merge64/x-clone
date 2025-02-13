@@ -236,7 +236,7 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			ParentID: &parentPost.ID,
 			Body:     parentPost.Body,
 		}
-		if req.Quote != "" {
+		if req.Quote != constants.EMPTY {
 			repost.Quote = &req.Quote
 		}
 

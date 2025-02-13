@@ -24,7 +24,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		}
 	}
 
-	private := router.Group("/")
+	private := router.Group("/api")
 	private.Use(middleware.AuthMiddleware(db))
 	{
 		for _, endpoint := range controllers.PrivateEndpoints {

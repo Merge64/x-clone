@@ -23,7 +23,7 @@ var UserLogoutEndpoint = models.Endpoint{
 	HandlerFunction: LogoutHandler,
 }
 
-//TODO User Profile Endpoints
+// TODO User Profile Endpoints
 
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
@@ -43,7 +43,7 @@ var GetFollowersProfileEndpoint = models.Endpoint{
 	HandlerFunction: GetFollowersProfileHandler,
 }
 
-//TODO Post Endpoints
+// TODO Post Endpoints
 
 var GetAllPostsEndpoint = models.Endpoint{
 	Method:          models.GET,
@@ -99,7 +99,7 @@ var EditUserProfileEndpoint = models.Endpoint{
 	HandlerFunction: EditUserProfileHandler,
 }
 
-//TODO Search Endpoints
+// TODO Search Endpoints
 
 var SearchPostEndpoint = models.Endpoint{
 	Method:          models.GET,
@@ -107,7 +107,7 @@ var SearchPostEndpoint = models.Endpoint{
 	HandlerFunction: SearchPostHandler,
 }
 
-//TODO SearchLatestPost
+// TODO SearchLatestPost
 
 var SearchUserEndpoint = models.Endpoint{
 	Method:          models.GET,
@@ -115,7 +115,7 @@ var SearchUserEndpoint = models.Endpoint{
 	HandlerFunction: SearchUserHandler,
 }
 
-//TODO Direct Messaging
+// TODO Direct Messaging
 
 var ListConversationsEndpoint = models.Endpoint{
 	Method:          models.GET,

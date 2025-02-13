@@ -58,7 +58,7 @@ func SignUpHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if createErr := user.CreateAccount(db, req.Username, string(hashedPassword), req.Mail, locationAux); createErr != nil {
+		if user.CreateAccount(db, req.Username, string(hashedPassword), req.Mail, locationAux) != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid parameters to create an account"})
 			return
 		}

@@ -146,14 +146,14 @@ func GetAllPostsByUserID(db *gorm.DB, userID uint) ([]models.Post, error) {
 	return posts, nil
 }
 
-func CreatePost(db *gorm.DB, userID uint, parentID *uint, quoteID *uint, body string) error {
+func CreatePost(db *gorm.DB, userID uint, parentID *uint, quote *string, body string) error {
 	if !userExists(db, userID) {
 		return errors.New(constants.ERRNOUSER)
 	}
 	post := models.Post{
 		UserID:   userID,
 		ParentID: parentID,
-		Quote:    quoteID,
+		Quote:    quote,
 		Body:     body,
 	}
 

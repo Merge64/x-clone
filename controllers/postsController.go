@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"main/constants"
@@ -31,19 +30,9 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		parentID, optionalIDErr := parseOptionalID(c, "parent")
-		if optionalIDErr != nil {
-			sendErrorResponse(c, http.StatusBadRequest, optionalIDErr.Error())
-			return
-		}
-
-		quoteID, optionalIDErr := parseOptionalID(c, "quote")
-		if optionalIDErr != nil {
-			sendErrorResponse(c, http.StatusBadRequest, optionalIDErr.Error())
-			return
-		}
-
-		if createPostErr := user.CreatePost(db, userID, parentID, quoteID, body); createPostErr != nil {
+		var quote *string // its empty when created
+		var parentID *uint
+		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
 			if createPostErr.Error() == constants.ERRNOUSER {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ERRNOUSER)
 				return
@@ -147,6 +136,12 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
+		// If this post is a repost (has a ParentID), do not allow editing the body. forbidden
+		if post.ParentID != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
+			return
+		}
+
 		post.Body = body
 		if db.Save(&post).Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
@@ -192,6 +187,71 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Parse the parent post id from the URL parameter.
+		parentIDStr := c.Param("parentid")
+		parentID, err := strconv.Atoi(parentIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post id"})
+			return
+		}
+
+		// Get the current user's id from the context.
+		userIDVal, _ := c.Get("userID")
+		currentUserID, ok := userIDVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+			return
+		}
+
+		var req struct {
+			Quote string `json:"quote"`
+		}
+		if errJSON := c.ShouldBindJSON(&req); errJSON != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
+			return
+		}
+
+		var parentPost models.Post
+		if errDB := db.First(&parentPost, parentID).Error; errDB != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
+			return
+		}
+
+		// Flatten the repost chain:
+		// If the parent post is itself a repost (i.e. it has a ParentID),
+		// then we want to fetch the original post.
+		if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
+			var originalPost models.Post
+			if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
+				return
+			}
+			parentPost = originalPost
+		}
+
+		repost := models.Post{
+			UserID:   currentUserID,
+			ParentID: &parentPost.ID,
+			Body:     parentPost.Body,
+		}
+		if req.Quote != constants.EMPTY {
+			repost.Quote = &req.Quote
+		}
+
+		if errDB := db.Create(&repost).Error; errDB != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create repost"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Repost created successfully",
+			"post":    repost,
+		})
+	}
+}
+
 //// AUX.
 
 func parseFormData(c *gin.Context) error {
@@ -220,21 +280,6 @@ func validatePostBody(body string) error {
 		return errors.New("body cannot be empty")
 	}
 	return nil
-}
-
-func parseOptionalID(c *gin.Context, paramName string) (*uint, error) {
-	paramStr := c.PostForm(paramName)
-	if paramStr == constants.EMPTY {
-		return nil, errors.New(constants.ERRNOVALUE)
-	}
-
-	parsedID, err := strconv.ParseUint(paramStr, 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("invalid %s ID", paramName)
-	}
-
-	tempID := uint(parsedID)
-	return &tempID, nil
 }
 
 func sendErrorResponse(c *gin.Context, statusCode int, message string) {

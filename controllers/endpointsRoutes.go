@@ -7,134 +7,144 @@ import (
 
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialUrlAuth + "signup",
+	Path:            constants.InitialURLAuth + "signup",
 	HandlerFunction: SignUpHandler,
 }
 
 var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialUrlAuth + "login",
+	Path:            constants.InitialURLAuth + "login",
 	HandlerFunction: LoginHandler,
 }
 
 var UserLogoutEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialUrlAuth + "logout",
+	Path:            constants.InitialURLAuth + "logout",
 	HandlerFunction: LogoutHandler,
 }
 
-var GetAllPostsByUserIDEndpoint = models.Endpoint{
+//TODO User Profile Endpoints
+
+var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialUrl + "/profile/:userid/posts",
-	HandlerFunction: GetPostsByUserIDHandler,
-}
-
-var GetAllPostsEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.InitialUrl + "posts/all",
-	HandlerFunction: GetAllPostsHandler,
-}
-
-var GetSpecificPostEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.InitialUrl + "posts/:postid",
-	HandlerFunction: GetSpecificPostHandler,
-}
-
-var DeletePostEndpoint = models.Endpoint{
-	Method:          models.DELETE,
-	Path:            constants.InitialUrl + "posts/:postid/delete",
-	HandlerFunction: DeletePostHandler,
-}
-
-var EditPostEndpoint = models.Endpoint{
-	Method:          models.PUT,
-	Path:            constants.InitialUrl + "posts/:postid/edit",
-	HandlerFunction: EditPostHandler,
-}
-
-var CreatePostEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.InitialUrl + "posts/create",
-	HandlerFunction: CreatePostHandler,
-}
-
-var CreateRepostEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.InitialUrl + "/posts/:parentid/repost",
-	HandlerFunction: CreateRepostHandler,
-}
-
-var GetFollowersProfileEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.InitialUrl + "profile/followers/user/:userid",
-	HandlerFunction: GetFollowersProfileHandler,
+	Path:            constants.InitialURL + "profile/:userid",
+	HandlerFunction: ViewUserProfileHandler,
 }
 
 var GetFollowingProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialUrl + "profile/following/user/:userid",
+	Path:            constants.InitialURL + "profile/following/user/:userid",
 	HandlerFunction: GetFollowingProfileHandler,
 }
 
-var ViewUserProfileEndpoint = models.Endpoint{
+var GetFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialUrl + "profile/:userid",
-	HandlerFunction: ViewUserProfileHandler,
+	Path:            constants.InitialURL + "profile/followers/user/:userid",
+	HandlerFunction: GetFollowersProfileHandler,
 }
 
-var EditUserProfileEndpoint = models.Endpoint{
+//TODO Post Endpoints
+
+var GetAllPostsEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURL + "posts/all",
+	HandlerFunction: GetAllPostsHandler,
+}
+
+var CreatePostEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURL + "posts/create",
+	HandlerFunction: CreatePostHandler,
+}
+
+var GetAllPostsByUserIDEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURL + "/profile/:userid/posts",
+	HandlerFunction: GetPostsByUserIDHandler,
+}
+
+var GetSpecificPostEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURL + "posts/:postid",
+	HandlerFunction: GetSpecificPostHandler,
+}
+
+var EditPostEndpoint = models.Endpoint{
 	Method:          models.PUT,
-	Path:            constants.InitialUrl + "profile/:userid/edit",
-	HandlerFunction: EditUserProfileHandler,
+	Path:            constants.InitialURL + "posts/:postid/edit",
+	HandlerFunction: EditPostHandler,
 }
 
-var SearchUserEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.InitialUrl + "search/:username",
-	HandlerFunction: SearchUserHandler,
+var DeletePostEndpoint = models.Endpoint{
+	Method:          models.DELETE,
+	Path:            constants.InitialURL + "posts/:postid/delete",
+	HandlerFunction: DeletePostHandler,
 }
 
-var SearchPostEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.InitialUrl + "posts",
-	HandlerFunction: SearchPostHandler,
+var CreateRepostEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURL + "/posts/:parentid/repost",
+	HandlerFunction: CreateRepostHandler,
 }
 
 var ToggleLikeEndPoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialUrl + "togglelike/:postid",
+	Path:            constants.InitialURL + "togglelike/:postid",
 	HandlerFunction: ToggleLikeHandler,
 }
 
-var FollowUserEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.InitialUrl + "follow/:userid",
-	HandlerFunction: FollowUserHandler,
+var EditUserProfileEndpoint = models.Endpoint{
+	Method:          models.PUT,
+	Path:            constants.InitialURL + "profile/:userid/edit",
+	HandlerFunction: EditUserProfileHandler,
 }
 
-var UnfollowUserEndpoint = models.Endpoint{
-	Method:          models.DELETE,
-	Path:            constants.InitialUrl + "unfollow/:userid",
-	HandlerFunction: UnfollowUserHandler,
+//TODO Search Endpoints
+
+var SearchPostEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURL + "posts",
+	HandlerFunction: SearchPostHandler,
 }
 
-var SendDirectMessageEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.InitialUrl + "conversations/users/:userid/message",
-	HandlerFunction: SendMessageHandler,
+//TODO SearchLatestPost
+
+var SearchUserEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURL + "search/:username",
+	HandlerFunction: SearchUserHandler,
 }
+
+//TODO Direct Messaging
 
 var ListConversationsEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialUrl + "conversations/listall",
+	Path:            constants.InitialURL + "conversations/listall",
 	HandlerFunction: ListConversationsHandler,
 }
 
 var GetConversationMessagesEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialUrl + "conversations/:conversationID/messages",
+	Path:            constants.InitialURL + "conversations/:conversationID/messages",
 	HandlerFunction: GetMessagesForConversationHandler,
+}
+
+var SendDirectMessageEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURL + "conversations/users/:userid/message",
+	HandlerFunction: SendMessageHandler,
+}
+
+var FollowUserEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURL + "follow/:userid",
+	HandlerFunction: FollowUserHandler,
+}
+
+var UnfollowUserEndpoint = models.Endpoint{
+	Method:          models.DELETE,
+	Path:            constants.InitialURL + "unfollow/:userid",
+	HandlerFunction: UnfollowUserHandler,
 }
 
 var PublicEndpoints = []models.Endpoint{

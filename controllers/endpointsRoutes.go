@@ -5,6 +5,24 @@ import (
 	"main/models"
 )
 
+var UserSignUpEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "i/flow/signup",
+	HandlerFunction: SignUpHandler,
+}
+
+var UserLoginEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "i/flow/login",
+	HandlerFunction: LoginHandler,
+}
+
+var UserLogoutEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.BASEURL + "i/flow/logout",
+	HandlerFunction: LogoutHandler,
+}
+
 var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.BASEURL + "/profile/:userid/posts",
@@ -99,24 +117,6 @@ var UnfollowUserEndpoint = models.Endpoint{
 	Method:          models.DELETE,
 	Path:            constants.BASEURL + "unfollow/:userid",
 	HandlerFunction: UnfollowUserHandler,
-}
-
-var UserSignUpEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "signup",
-	HandlerFunction: SignUpHandler,
-}
-
-var UserLoginEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "login",
-	HandlerFunction: LoginHandler,
-}
-
-var UserLogoutEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.BASEURL + "logout",
-	HandlerFunction: LogoutHandler,
 }
 
 var SendDirectMessageEndpoint = models.Endpoint{

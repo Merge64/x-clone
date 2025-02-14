@@ -47,7 +47,7 @@ var GetFollowingProfileEndpoint = models.Endpoint{
 
 var GetFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "profile/followers/user/:userid",
+	Path:            constants.InitialURLProfile + ":username/followers",
 	HandlerFunction: GetFollowersProfileHandler,
 }
 

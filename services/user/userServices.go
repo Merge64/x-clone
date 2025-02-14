@@ -233,12 +233,17 @@ func UpdateProfile(db *gorm.DB, user *models.User) error {
 	return db.Save(user).Error
 }
 
-func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
+func GetFollowers(db *gorm.DB, username string) ([]models.User, error) {
 	var followers []models.User
+	currentUser, getUserErr := GetUserByUsername(db, username)
+	if getUserErr != nil {
+		return nil, getUserErr
+	}
+
 	result := db.Table("users").
 		Select("users.*").
 		Joins("JOIN follows ON users.id = follows.following_user_id").
-		Where("followed_user_id = ?", userID).
+		Where("followed_user_id = ?", currentUser.ID).
 		Find(&followers)
 
 	if result.Error != nil {

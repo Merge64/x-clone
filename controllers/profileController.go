@@ -6,7 +6,6 @@ import (
 	"main/models"
 	"main/services/user"
 	"net/http"
-	"strconv"
 )
 
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
@@ -56,19 +55,34 @@ func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 
 func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, atoiErr := strconv.Atoi(c.Param("userid"))
-		if atoiErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-			return
+		username := c.Param("username")
+		var listFollowers []struct {
+			Username string  `json:"username"`
+			Mail     string  `json:"mail"`
+			Location *string `json:"location"`
 		}
 
-		followers, getFollowersErr := user.GetFollowers(db, uint(userID))
+		followers, getFollowersErr := user.GetFollowers(db, username)
 		if getFollowersErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": getFollowersErr.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Followers Profile successfully", "followers": followers})
+		for _, currentUser := range followers {
+			var profile struct {
+				Username string  `json:"username"`
+				Mail     string  `json:"mail"`
+				Location *string `json:"location"`
+			}
+
+			profile.Username = currentUser.Username
+			profile.Mail = currentUser.Mail
+			profile.Location = currentUser.Location
+
+			listFollowers = append(listFollowers, profile)
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "View Followers Profile successfully", "followers": listFollowers})
 	}
 }
 
@@ -86,6 +100,7 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": getFollowingErr.Error()})
 			return
 		}
+
 		for _, currentUser := range following {
 			var profile struct {
 				Username string  `json:"username"`

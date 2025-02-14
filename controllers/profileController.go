@@ -56,11 +56,6 @@ func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
-		var listFollowers []struct {
-			Username string  `json:"username"`
-			Mail     string  `json:"mail"`
-			Location *string `json:"location"`
-		}
 
 		followers, getFollowersErr := user.GetFollowers(db, username)
 		if getFollowersErr != nil {
@@ -68,19 +63,7 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		for _, currentUser := range followers {
-			var profile struct {
-				Username string  `json:"username"`
-				Mail     string  `json:"mail"`
-				Location *string `json:"location"`
-			}
-
-			profile.Username = currentUser.Username
-			profile.Mail = currentUser.Mail
-			profile.Location = currentUser.Location
-
-			listFollowers = append(listFollowers, profile)
-		}
+		listFollowers := user.EnlistUsers(followers)
 
 		c.JSON(http.StatusOK, gin.H{"message": "View Followers Profile successfully", "followers": listFollowers})
 	}
@@ -89,11 +72,6 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
-		var listFollowing []struct {
-			Username string  `json:"username"`
-			Mail     string  `json:"mail"`
-			Location *string `json:"location"`
-		}
 
 		following, getFollowingErr := user.GetFollowing(db, username)
 		if getFollowingErr != nil {
@@ -101,19 +79,7 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		for _, currentUser := range following {
-			var profile struct {
-				Username string  `json:"username"`
-				Mail     string  `json:"mail"`
-				Location *string `json:"location"`
-			}
-
-			profile.Username = currentUser.Username
-			profile.Mail = currentUser.Mail
-			profile.Location = currentUser.Location
-
-			listFollowing = append(listFollowing, profile)
-		}
+		listFollowing := user.EnlistUsers(following)
 
 		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": listFollowing})
 	}

@@ -12,6 +12,11 @@ import (
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
+		var profile struct {
+			Username string
+			Mail     string
+			Location string
+		}
 
 		currentUser, getUserErr := user.GetUserByUsername(db, username)
 		if getUserErr != nil {
@@ -19,7 +24,12 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Account successfully", "user": currentUser})
+		profile.Username = currentUser.Username
+		profile.Mail = currentUser.Mail
+		if currentUser.Location != nil {
+			profile.Location = *currentUser.Location
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "View Account successfully", "user": profile})
 	}
 }
 
@@ -64,7 +74,7 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 
 func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, atoiErr := strconv.Atoi(c.Param("userid"))
+		userID, atoiErr := strconv.Atoi(c.Param("username"))
 		if atoiErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 			return

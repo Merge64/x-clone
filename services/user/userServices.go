@@ -193,24 +193,6 @@ func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 	return true
 }
 
-//	func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
-//		var user models.User
-//
-//		field := "Mail"
-//		if !IsEmail(inputUser) {
-//			field = "Username"
-//		}
-//		err := queryUserByField(db, field, inputUser, password, &user)
-//		if err != nil {
-//			if errors.Is(err, gorm.ErrRecordNotFound) {
-//				return false
-//			}
-//			log.Printf("Error querying user by %s: %v", field, err)
-//			return false
-//		}
-//
-//		return true
-//	}
 func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EmailRegexPatterns)
 	return re.MatchString(email)
@@ -218,7 +200,7 @@ func IsEmail(email string) bool {
 
 func GetUserByUsername(db *gorm.DB, username string) (models.User, error) {
 	var user models.User
-	err := db.First(&user, username).Error
+	err := db.Table("users").Where("username = ?", username).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return user, errors.New(constants.ErrNoUser)
@@ -293,10 +275,6 @@ func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
 
 	return true
 }
-
-//	func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
-//		return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
-//	}
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	var follow models.Follow

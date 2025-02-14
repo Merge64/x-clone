@@ -248,12 +248,17 @@ func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
 	return followers, nil
 }
 
-func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
+func GetFollowing(db *gorm.DB, username string) ([]models.User, error) {
 	var following []models.User
+	currentUser, getUserErr := GetUserByUsername(db, username)
+	if getUserErr != nil {
+		return nil, getUserErr
+	}
+
 	result := db.Table("users").
 		Select("users.*").
 		Joins("JOIN follows ON users.id = follows.followed_user_id").
-		Where("following_user_id = ?", u).
+		Where("following_user_id = ?", currentUser.ID).
 		Find(&following)
 
 	if result.Error != nil {

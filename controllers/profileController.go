@@ -74,18 +74,32 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 
 func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, atoiErr := strconv.Atoi(c.Param("username"))
-		if atoiErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-			return
+		username := c.Param("username")
+		var listFollowing []struct {
+			Username string  `json:"username"`
+			Mail     string  `json:"mail"`
+			Location *string `json:"location"`
 		}
 
-		following, getFollowingErr := user.GetFollowing(db, uint(userID))
+		following, getFollowingErr := user.GetFollowing(db, username)
 		if getFollowingErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": getFollowingErr.Error()})
 			return
 		}
+		for _, currentUser := range following {
+			var profile struct {
+				Username string  `json:"username"`
+				Mail     string  `json:"mail"`
+				Location *string `json:"location"`
+			}
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": following})
+			profile.Username = currentUser.Username
+			profile.Mail = currentUser.Mail
+			profile.Location = currentUser.Location
+
+			listFollowing = append(listFollowing, profile)
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": listFollowing})
 	}
 }

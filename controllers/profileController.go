@@ -11,13 +11,9 @@ import (
 
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, atoiErr := strconv.Atoi(c.Param("userid"))
-		if atoiErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-			return
-		}
+		username := c.Param("username")
 
-		currentUser, getUserErr := user.GetUserByID(db, uint(userID))
+		currentUser, getUserErr := user.GetUserByUsername(db, username)
 		if getUserErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": getUserErr.Error()})
 			return

@@ -216,9 +216,9 @@ func IsEmail(email string) bool {
 	return re.MatchString(email)
 }
 
-func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
+func GetUserByUsername(db *gorm.DB, username string) (models.User, error) {
 	var user models.User
-	err := db.First(&user, userID).Error
+	err := db.First(&user, username).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return user, errors.New(constants.ErrNoUser)

@@ -27,7 +27,7 @@ var UserLogoutEndpoint = models.Endpoint{
 
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "profile/:userid",
+	Path:            constants.InitialURLProfile + ":username",
 	HandlerFunction: ViewUserProfileHandler,
 }
 

@@ -13,7 +13,8 @@ import (
 
 func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		posts, err := user.GetAllPosts(db)
+		rawPosts, err := user.GetAllPosts(db)
+
 		if err != nil {
 			if errors.Is(err, errors.New("no posts found")) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
@@ -22,7 +23,10 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"posts": posts})
+
+		listPosts := user.ProcessPosts(rawPosts)
+
+		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
 }
 
@@ -60,11 +64,11 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-func GetPostsByUserIDHandler(db *gorm.DB) gin.HandlerFunc {
+func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
+		rawPosts, errDB := user.GetAllPostsByUsername(db, username)
 
-		posts, errDB := user.GetAllPostsByUsername(db, username)
 		if errDB != nil {
 			if errors.Is(errDB, gorm.ErrRecordNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
@@ -74,7 +78,9 @@ func GetPostsByUserIDHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"posts": posts})
+		listPosts := user.ProcessPosts(rawPosts)
+
+		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
 }
 

@@ -59,31 +59,31 @@ var CreatePostEndpoint = models.Endpoint{
 
 var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "/:username",
-	HandlerFunction: GetPostsByUserIDHandler,
+	Path:            constants.InitialURLPosts + "/:username",
+	HandlerFunction: GetPostsByUsernameHandler,
 }
 
 var GetSpecificPostEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "posts/:postid",
+	Path:            constants.InitialURLPosts + ":username/:postid",
 	HandlerFunction: GetSpecificPostHandler,
 }
 
 var EditPostEndpoint = models.Endpoint{
 	Method:          models.PUT,
-	Path:            constants.InitialURL + "posts/:postid/edit",
+	Path:            constants.InitialURLPosts + "/:postid/edit",
 	HandlerFunction: EditPostHandler,
 }
 
 var DeletePostEndpoint = models.Endpoint{
 	Method:          models.DELETE,
-	Path:            constants.InitialURL + "posts/:postid/delete",
+	Path:            constants.InitialURLPosts + "/:postid/delete",
 	HandlerFunction: DeletePostHandler,
 }
 
 var CreateRepostEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURL + "/posts/:parentid/repost",
+	Path:            constants.InitialURLPosts + "/:parentid/repost",
 	HandlerFunction: CreateRepostHandler,
 }
 
@@ -103,7 +103,7 @@ var EditUserProfileEndpoint = models.Endpoint{
 
 var SearchPostEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "posts",
+	Path:            constants.InitialURL + "posts/asdasd",
 	HandlerFunction: SearchPostHandler,
 }
 

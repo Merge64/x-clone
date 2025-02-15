@@ -384,3 +384,32 @@ func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content s
 	}
 	return db.Create(&message).Error
 }
+
+func ProcessPosts(rawPosts []models.Post) []ListPosts {
+	var listPosts []ListPosts
+
+	for _, post := range rawPosts {
+		var currentPost struct {
+			UserID   uint    `json:"userid"`
+			ParentID *uint   `json:"parentid"`
+			Quote    *string `json:"quote"`
+			Body     string  `json:"body"`
+		}
+
+		currentPost.UserID = post.UserID
+		currentPost.ParentID = post.ParentID
+		currentPost.Quote = post.Quote
+		currentPost.Body = post.Body
+
+		listPosts = append(listPosts, currentPost)
+	}
+
+	return listPosts
+}
+
+type ListPosts struct {
+	UserID   uint    `json:"userid"`
+	ParentID *uint   `json:"parentid"`
+	Quote    *string `json:"quote"`
+	Body     string  `json:"body"`
+}

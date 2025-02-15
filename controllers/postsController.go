@@ -62,16 +62,12 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func GetPostsByUserIDHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, err := strconv.ParseUint(c.Param("userid"), 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-			return
-		}
+		username := c.Param("username")
 
-		posts, errDB := user.GetAllPostsByUserID(db, uint(userID))
+		posts, errDB := user.GetAllPostsByUsername(db, username)
 		if errDB != nil {
 			if errors.Is(errDB, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given userID."})
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})

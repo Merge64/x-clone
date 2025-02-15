@@ -59,7 +59,7 @@ var CreatePostEndpoint = models.Endpoint{
 
 var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "/profile/:userid/posts",
+	Path:            constants.InitialURL + "/:username",
 	HandlerFunction: GetPostsByUserIDHandler,
 }
 

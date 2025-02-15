@@ -136,11 +136,17 @@ func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 	return posts, nil
 }
 
-func GetAllPostsByUserID(db *gorm.DB, userID uint) ([]models.Post, error) {
+func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) {
 	var posts []models.Post
-	result := db.Where("user_id = ?", userID).Find(&posts)
+	var user models.User
+
+	db.Where("username = ?", username).First(&user)
+	result := db.Where("user_id = ?", user.ID).Find(&posts)
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, errors.New(constants.ErrNoPost)
 	}
 
 	return posts, nil

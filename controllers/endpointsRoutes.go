@@ -47,7 +47,7 @@ var GetFollowersProfileEndpoint = models.Endpoint{
 
 var GetAllPostsEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "posts/all",
+	Path:            constants.InitialURLPosts,
 	HandlerFunction: GetAllPostsHandler,
 }
 

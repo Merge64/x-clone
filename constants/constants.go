@@ -5,6 +5,7 @@ const EmailRegexPatterns = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 
 const InitialURL = "/"
 const InitialURLAuth = "/i/flow/"
+const InitialURLPosts = "/posts"
 
 const ExpDate = 720
 const MaxCookieAge = 3600

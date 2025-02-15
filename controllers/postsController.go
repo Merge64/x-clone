@@ -11,6 +11,21 @@ import (
 	"strconv"
 )
 
+func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		posts, err := user.GetAllPosts(db)
+		if err != nil {
+			if errors.Is(err, errors.New("no posts found")) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"posts": posts})
+	}
+}
+
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if parseErr := parseFormData(c); parseErr != nil {
@@ -18,9 +33,9 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		userID, getUserIDerr := getUserIDFromContext(c)
-		if getUserIDerr != nil {
-			sendErrorResponse(c, http.StatusUnauthorized, getUserIDerr.Error())
+		userID, getUserIDErr := getUserIDFromContext(c)
+		if getUserIDErr != nil {
+			sendErrorResponse(c, http.StatusUnauthorized, getUserIDErr.Error())
 			return
 		}
 
@@ -42,21 +57,6 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, gin.H{"message": "Post created successfully"})
-	}
-}
-
-func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		posts, err := user.GetAllPosts(db)
-		if err != nil {
-			if errors.Is(err, errors.New("no posts found")) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"posts": posts})
 	}
 }
 

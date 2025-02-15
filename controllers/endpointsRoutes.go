@@ -89,7 +89,7 @@ var CreateRepostEndpoint = models.Endpoint{
 
 var ToggleLikeEndPoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURL + "togglelike/:postid",
+	Path:            constants.InitialURLPosts + "/:postid/like",
 	HandlerFunction: ToggleLikeHandler,
 }
 

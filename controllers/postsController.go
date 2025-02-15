@@ -221,9 +221,6 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Flatten the repost chain:
-		// If the parent post is itself a repost (i.e. it has a ParentID),
-		// then we want to fetch the original post.
 		if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
 			var originalPost models.Post
 			if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {

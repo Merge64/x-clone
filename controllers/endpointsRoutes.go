@@ -57,6 +57,12 @@ var CreatePostEndpoint = models.Endpoint{
 	HandlerFunction: CreatePostHandler,
 }
 
+var CreateRepostEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURLPosts + "/:postid/repost",
+	HandlerFunction: CreateRepostHandler,
+}
+
 var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLPosts + "/:username",
@@ -65,7 +71,7 @@ var GetAllPostsByUserIDEndpoint = models.Endpoint{
 
 var GetSpecificPostEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLPosts + ":username/:postid",
+	Path:            constants.InitialURLPosts + "/:username/:postid",
 	HandlerFunction: GetSpecificPostHandler,
 }
 
@@ -79,12 +85,6 @@ var DeletePostEndpoint = models.Endpoint{
 	Method:          models.DELETE,
 	Path:            constants.InitialURLPosts + "/:postid/delete",
 	HandlerFunction: DeletePostHandler,
-}
-
-var CreateRepostEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.InitialURLPosts + "/:parentid/repost",
-	HandlerFunction: CreateRepostHandler,
 }
 
 var ToggleLikeEndPoint = models.Endpoint{

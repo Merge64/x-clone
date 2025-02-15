@@ -407,6 +407,16 @@ func ProcessPosts(rawPosts []models.Post) []ListPosts {
 	return listPosts
 }
 
+func ProcessPost(post models.Post) PostInfo {
+	return PostInfo{ParentID: post.ParentID, Quote: post.Quote, Body: post.Body}
+}
+
+type PostInfo struct {
+	ParentID *uint   `json:"parentid"`
+	Quote    *string `json:"quote"`
+	Body     string  `json:"body"`
+}
+
 type ListPosts struct {
 	UserID   uint    `json:"userid"`
 	ParentID *uint   `json:"parentid"`

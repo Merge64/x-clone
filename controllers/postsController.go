@@ -192,7 +192,7 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Parse the parent post id from the URL parameter.
-		parentIDStr := c.Param("parentid")
+		parentIDStr := c.Param("postid")
 		parentID, err := strconv.Atoi(parentIDStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post id"})
@@ -230,19 +230,21 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			parentPost = originalPost
 		}
 
-		repost := models.Post{
+		rawRepost := models.Post{
 			UserID:   currentUserID,
 			ParentID: &parentPost.ID,
 			Body:     parentPost.Body,
 		}
 		if req.Quote != constants.Empty {
-			repost.Quote = &req.Quote
+			rawRepost.Quote = &req.Quote
 		}
 
-		if errDB := db.Create(&repost).Error; errDB != nil {
+		if errDB := db.Create(&rawRepost).Error; errDB != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create repost"})
 			return
 		}
+
+		repost := user.ProcessPost(rawRepost)
 
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Repost created successfully",

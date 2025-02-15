@@ -53,7 +53,7 @@ var GetAllPostsEndpoint = models.Endpoint{
 
 var CreatePostEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURL + "posts/create",
+	Path:            constants.InitialURLPosts + "/create",
 	HandlerFunction: CreatePostHandler,
 }
 

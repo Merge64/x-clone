@@ -12,9 +12,10 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
 		var profile struct {
-			Username string
-			Mail     string
-			Location string
+			// NameTag   string
+			Username  string
+			Location  string
+			CreatedAt string
 		}
 
 		currentUser, getUserErr := user.GetUserByUsername(db, username)
@@ -24,11 +25,10 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		profile.Username = currentUser.Username
-		profile.Mail = currentUser.Mail
 		if currentUser.Location != nil {
 			profile.Location = *currentUser.Location
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "View Account successfully", "user": profile})
+		c.JSON(http.StatusOK, gin.H{"message": "View Account successfully", "profile": profile})
 	}
 }
 
@@ -49,7 +49,7 @@ func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Edit Profile successfully", "user": currentUser})
+		c.JSON(http.StatusOK, gin.H{"message": "Edit Profile successfully"})
 	}
 }
 

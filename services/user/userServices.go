@@ -367,24 +367,12 @@ func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content s
 	return db.Create(&message).Error
 }
 
-func EnlistUsers(arrayOfUsers []models.User) []Profile {
-	var usersList []Profile
+func EnlistUsers(arrayOfUsers []models.User) []string {
+	var usersList []string
 
 	for _, currentUser := range arrayOfUsers {
-		var profile Profile
-
-		profile.Username = currentUser.Username
-		profile.Mail = currentUser.Mail
-		profile.Location = currentUser.Location
-
-		usersList = append(usersList, profile)
+		usersList = append(usersList, currentUser.Username)
 	}
 
 	return usersList
-}
-
-type Profile struct {
-	Username string  `json:"username"`
-	Mail     string  `json:"mail"`
-	Location *string `json:"location"`
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"log"
 	"main/constants"
 	"main/models"
 	"main/services/user"
@@ -16,7 +17,7 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 		rawPosts, err := user.GetAllPosts(db)
 
 		if err != nil {
-			if errors.Is(err, errors.New("no posts found")) {
+			if errors.Is(gorm.ErrRecordNotFound, err) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
 				return
 			}
@@ -24,35 +25,30 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listPosts := user.ProcessAllPosts(rawPosts)
-
+		listPosts := user.ProcessPosts(rawPosts)
 		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
 }
 
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if parseErr := parseFormData(c); parseErr != nil {
-			sendErrorResponse(c, http.StatusBadRequest, parseErr.Error())
+		userID, _ := getUserIDFromContext(c)
+		var req models.Post
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
 			return
 		}
 
-		userID, getUserIDErr := getUserIDFromContext(c)
-		if getUserIDErr != nil {
-			sendErrorResponse(c, http.StatusUnauthorized, getUserIDErr.Error())
-			return
-		}
-
-		body := c.PostForm("body")
-		if err := validatePostBody(body); err != nil {
+		if err := validatePostBody(req.Body); err != nil {
 			sendErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		var quote *string // its empty when created
 		var parentID *uint
-		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
-			if createPostErr.Error() == constants.ErrNoUser {
+		if err := user.CreatePost(db, userID, parentID, quote, req.Body); err != nil {
+			if err.Error() == constants.ErrNoUser {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ErrNoUser)
 				return
 			}
@@ -78,7 +74,7 @@ func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listPosts := user.ProcessAllPosts(rawPosts)
+		listPosts := user.ProcessPosts(rawPosts)
 
 		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
@@ -122,9 +118,15 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		body := c.PostForm("body")
-		if body == constants.Empty {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Body cannot be empty"})
+		var req models.Post
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
+			return
+		}
+
+		if err := validatePostBody(req.Body); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -143,7 +145,7 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		post.Body = body
+		post.Body = req.Body
 		if db.Save(&post).Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
 			return
@@ -241,7 +243,7 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		repost := user.ProcessPost(rawRepost)
+		repost := user.ProcessPosts([]models.Post{rawRepost})
 
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Repost created successfully",
@@ -250,15 +252,35 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-//// AUX.
+// TODO: Implement Share post
 
-func parseFormData(c *gin.Context) error {
-	if err := c.Request.ParseForm(); err != nil {
-		return errors.New("invalid form data")
+func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, _ := c.Get("userID")
+		likerID, _ := userID.(uint)
+
+		postID, atoiErr := strconv.Atoi(c.Param("postid"))
+		if atoiErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		toggleResult, toggleErr := user.ToggleLike(db, likerID, uint(postID))
+		if toggleErr != nil {
+			log.Println("Toggle Like error:", toggleErr)
+			if toggleResult.IsLiked {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to like post"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unlike post"})
+			}
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": toggleResult.MessageStatus})
 	}
-	return nil
 }
 
+// AUX.
 func getUserIDFromContext(c *gin.Context) (uint, error) {
 	userIDStr, exists := c.Get("userID")
 	if !exists {

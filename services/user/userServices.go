@@ -124,13 +124,13 @@ func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
 
 func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 	var posts []models.Post
-	// TODO: SCALE THIS
-	result := db.Find(&posts)
+
+	result := db.Table("posts").Find(&posts)
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ErrNoPost)
 	}
 
 	return posts, nil
@@ -385,17 +385,21 @@ func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content s
 	return db.Create(&message).Error
 }
 
-func ProcessAllPosts(rawPosts []models.Post) []ListPosts {
-	var listPosts []ListPosts
+func ProcessPosts(rawPosts []models.Post) []PostInfo {
+	var listPosts []PostInfo
 
 	for _, post := range rawPosts {
 		var currentPost struct {
-			UserID   uint    `json:"userid"` // Change to username in table
-			ParentID *uint   `json:"parentid"`
-			Quote    *string `json:"quote"`
-			Body     string  `json:"body"`
+			ID        uint    `json:"id"`
+			CreatedAt string  `json:"created_at"`
+			UserID    uint    `json:"userid"` // Change to username in table
+			ParentID  *uint   `json:"parentid"`
+			Quote     *string `json:"quote"`
+			Body      string  `json:"body"`
 		}
 
+		currentPost.ID = post.ID
+		currentPost.CreatedAt = post.CreatedAt.String()
 		currentPost.UserID = post.UserID
 		currentPost.ParentID = post.ParentID
 		currentPost.Quote = post.Quote
@@ -407,20 +411,12 @@ func ProcessAllPosts(rawPosts []models.Post) []ListPosts {
 	return listPosts
 }
 
-func ProcessPost(post models.Post) PostInfo {
-	return PostInfo{ParentID: post.ParentID, Quote: post.Quote, Body: post.Body}
-}
-
 // Add a username field when change "UserID" to "Username" in the table.
 type PostInfo struct {
-	ParentID *uint   `json:"parentid"`
-	Quote    *string `json:"quote"`
-	Body     string  `json:"body"`
-}
-
-type ListPosts struct {
-	UserID   uint    `json:"userid"`
-	ParentID *uint   `json:"parentid"`
-	Quote    *string `json:"quote"`
-	Body     string  `json:"body"`
+	ID        uint    `json:"id"`
+	CreatedAt string  `json:"created_at"`
+	UserID    uint    `json:"userid"` // Change to username in table
+	ParentID  *uint   `json:"parentid"`
+	Quote     *string `json:"quote"`
+	Body      string  `json:"body"`
 }

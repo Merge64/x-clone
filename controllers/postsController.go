@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"log"
 	"main/constants"
 	"main/models"
 	"main/services/user"
@@ -11,29 +12,43 @@ import (
 	"strconv"
 )
 
+func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rawPosts, err := user.GetAllPosts(db)
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
+	}
+}
+
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if parseErr := parseFormData(c); parseErr != nil {
-			sendErrorResponse(c, http.StatusBadRequest, parseErr.Error())
+		userID, _ := getUserIDFromContext(c)
+		var req models.Post
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
 			return
 		}
 
-		userID, getUserIDerr := getUserIDFromContext(c)
-		if getUserIDerr != nil {
-			sendErrorResponse(c, http.StatusUnauthorized, getUserIDerr.Error())
-			return
-		}
-
-		body := c.PostForm("body")
-		if err := validatePostBody(body); err != nil {
+		if err := validatePostBody(req.Body); err != nil {
 			sendErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		var quote *string // its empty when created
 		var parentID *uint
-		if createPostErr := user.CreatePost(db, userID, parentID, quote, body); createPostErr != nil {
-			if createPostErr.Error() == constants.ErrNoUser {
+		if err := user.CreatePost(db, userID, parentID, quote, req.Body); err != nil {
+			if err.Error() == constants.ErrNoUser {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ErrNoUser)
 				return
 			}
@@ -45,40 +60,23 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
+func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		posts, err := user.GetAllPosts(db)
-		if err != nil {
-			if errors.Is(err, errors.New("no posts found")) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"posts": posts})
-	}
-}
+		username := c.Param("username")
+		rawPosts, errDB := user.GetAllPostsByUsername(db, username)
 
-func GetPostsByUserIDHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID, err := strconv.ParseUint(c.Param("userid"), 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-			return
-		}
-
-		posts, errDB := user.GetAllPostsByUserID(db, uint(userID))
 		if errDB != nil {
 			if errors.Is(errDB, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given userID."})
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"posts": posts})
+		listPosts := user.ProcessPosts(rawPosts)
+
+		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
 }
 
@@ -120,9 +118,15 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		body := c.PostForm("body")
-		if body == constants.Empty {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Body cannot be empty"})
+		var req models.Post
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
+			return
+		}
+
+		if err := validatePostBody(req.Body); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -136,13 +140,12 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// If this post is a repost (has a ParentID), do not allow editing the body. forbidden
 		if post.ParentID != nil {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
 			return
 		}
 
-		post.Body = body
+		post.Body = req.Body
 		if db.Save(&post).Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
 			return
@@ -189,15 +192,13 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Parse the parent post id from the URL parameter.
-		parentIDStr := c.Param("parentid")
+		parentIDStr := c.Param("postid")
 		parentID, err := strconv.Atoi(parentIDStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post id"})
 			return
 		}
 
-		// Get the current user's id from the context.
 		userIDVal, _ := c.Get("userID")
 		currentUserID, ok := userIDVal.(uint)
 		if !ok {
@@ -219,9 +220,6 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Flatten the repost chain:
-		// If the parent post is itself a repost (i.e. it has a ParentID),
-		// then we want to fetch the original post.
 		if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
 			var originalPost models.Post
 			if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {
@@ -231,19 +229,21 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			parentPost = originalPost
 		}
 
-		repost := models.Post{
+		rawRepost := models.Post{
 			UserID:   currentUserID,
 			ParentID: &parentPost.ID,
 			Body:     parentPost.Body,
 		}
 		if req.Quote != constants.Empty {
-			repost.Quote = &req.Quote
+			rawRepost.Quote = &req.Quote
 		}
 
-		if errDB := db.Create(&repost).Error; errDB != nil {
+		if errDB := db.Create(&rawRepost).Error; errDB != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create repost"})
 			return
 		}
+
+		repost := user.ProcessPosts([]models.Post{rawRepost})
 
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Repost created successfully",
@@ -252,15 +252,35 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-//// AUX.
+// TODO: Implement Share post
 
-func parseFormData(c *gin.Context) error {
-	if err := c.Request.ParseForm(); err != nil {
-		return errors.New("invalid form data")
+func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, _ := c.Get("userID")
+		likerID, _ := userID.(uint)
+
+		postID, atoiErr := strconv.Atoi(c.Param("postid"))
+		if atoiErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		toggleResult, toggleErr := user.ToggleLike(db, likerID, uint(postID))
+		if toggleErr != nil {
+			log.Println("Toggle Like error:", toggleErr)
+			if toggleResult.IsLiked {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to like post"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unlike post"})
+			}
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": toggleResult.MessageStatus})
 	}
-	return nil
 }
 
+// AUX.
 func getUserIDFromContext(c *gin.Context) (uint, error) {
 	userIDStr, exists := c.Get("userID")
 	if !exists {

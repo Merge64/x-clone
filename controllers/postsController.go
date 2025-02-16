@@ -17,7 +17,7 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 		rawPosts, err := user.GetAllPosts(db)
 
 		if err != nil {
-			if errors.Is(gorm.ErrRecordNotFound, err) {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
 				return
 			}

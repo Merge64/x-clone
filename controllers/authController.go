@@ -28,11 +28,11 @@ func SignUpHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		var locationAux *string
-		if req.Location != "" {
+		if req.Location != constants.Empty {
 			locationAux = &req.Location
 		}
 
-		if req.Username == "" || req.Password == "" || req.Mail == "" {
+		if req.Username == constants.Empty || req.Password == constants.Empty || req.Mail == constants.Empty {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})
 			return
 		}
@@ -91,7 +91,7 @@ func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		secretKey := os.Getenv("SECRET")
-		if secretKey == "" {
+		if secretKey == constants.Empty {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Server configuration error"})
 			return
 		}

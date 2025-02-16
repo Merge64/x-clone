@@ -5,6 +5,8 @@ import (
 	"main/models"
 )
 
+// TODO: User Endpoints - Add Nickname for user
+
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.InitialURLAuth + "signup",
@@ -27,19 +29,25 @@ var UserLogoutEndpoint = models.Endpoint{
 
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "profile/:userid",
+	Path:            constants.InitialURLProfile + ":username",
 	HandlerFunction: ViewUserProfileHandler,
+}
+
+var EditUserProfileEndpoint = models.Endpoint{
+	Method:          models.PUT,
+	Path:            constants.InitialURLProfile + "edit",
+	HandlerFunction: EditUserProfileHandler,
 }
 
 var GetFollowingProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "profile/following/user/:userid",
+	Path:            constants.InitialURLProfile + ":username/following",
 	HandlerFunction: GetFollowingProfileHandler,
 }
 
 var GetFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "profile/followers/user/:userid",
+	Path:            constants.InitialURLProfile + ":username/followers",
 	HandlerFunction: GetFollowersProfileHandler,
 }
 
@@ -87,16 +95,16 @@ var DeletePostEndpoint = models.Endpoint{
 	HandlerFunction: DeletePostHandler,
 }
 
+var CreateRepostEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURL + "posts/:parentid/repost",
+	HandlerFunction: CreateRepostHandler,
+}
+
 var ToggleLikeEndPoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.InitialURLPosts + "/:postid/like",
 	HandlerFunction: ToggleLikeHandler,
-}
-
-var EditUserProfileEndpoint = models.Endpoint{
-	Method:          models.PUT,
-	Path:            constants.InitialURL + "profile/:userid/edit",
-	HandlerFunction: EditUserProfileHandler,
 }
 
 // TODO Search Endpoints

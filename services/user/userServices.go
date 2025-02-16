@@ -199,32 +199,14 @@ func UsernameAlreadyUsed(db *gorm.DB, username string) bool {
 	return true
 }
 
-//	func ValidateCredentials(db *gorm.DB, inputUser, password string) bool {
-//		var user models.User
-//
-//		field := "Mail"
-//		if !IsEmail(inputUser) {
-//			field = "Username"
-//		}
-//		err := queryUserByField(db, field, inputUser, password, &user)
-//		if err != nil {
-//			if errors.Is(err, gorm.ErrRecordNotFound) {
-//				return false
-//			}
-//			log.Printf("Error querying user by %s: %v", field, err)
-//			return false
-//		}
-//
-//		return true
-//	}
 func IsEmail(email string) bool {
 	re := regexp.MustCompile(constants.EmailRegexPatterns)
 	return re.MatchString(email)
 }
 
-func GetUserByID(db *gorm.DB, userID uint) (models.User, error) {
+func GetUserByUsername(db *gorm.DB, username string) (models.User, error) {
 	var user models.User
-	err := db.First(&user, userID).Error
+	err := db.Table("users").Where("username = ?", username).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return user, errors.New(constants.ErrNoUser)
@@ -257,12 +239,17 @@ func UpdateProfile(db *gorm.DB, user *models.User) error {
 	return db.Save(user).Error
 }
 
-func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
+func GetFollowers(db *gorm.DB, username string) ([]models.User, error) {
 	var followers []models.User
+	currentUser, getUserErr := GetUserByUsername(db, username)
+	if getUserErr != nil {
+		return nil, getUserErr
+	}
+
 	result := db.Table("users").
 		Select("users.*").
 		Joins("JOIN follows ON users.id = follows.following_user_id").
-		Where("followed_user_id = ?", userID).
+		Where("followed_user_id = ?", currentUser.ID).
 		Find(&followers)
 
 	if result.Error != nil {
@@ -272,12 +259,17 @@ func GetFollowers(db *gorm.DB, userID uint) ([]models.User, error) {
 	return followers, nil
 }
 
-func GetFollowing(db *gorm.DB, u uint) ([]models.User, error) {
+func GetFollowing(db *gorm.DB, username string) ([]models.User, error) {
 	var following []models.User
+	currentUser, getUserErr := GetUserByUsername(db, username)
+	if getUserErr != nil {
+		return nil, getUserErr
+	}
+
 	result := db.Table("users").
 		Select("users.*").
 		Joins("JOIN follows ON users.id = follows.followed_user_id").
-		Where("following_user_id = ?", u).
+		Where("following_user_id = ?", currentUser.ID).
 		Find(&following)
 
 	if result.Error != nil {
@@ -299,10 +291,6 @@ func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
 
 	return true
 }
-
-//	func queryUserByField(db *gorm.DB, field, value, password string, user *models.User) error {
-//		return db.Where(fmt.Sprintf("%s = ? AND Password = ?", field), value, password).First(user).Error
-//	}
 
 func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	var follow models.Follow
@@ -409,6 +397,16 @@ func ProcessPosts(rawPosts []models.Post) []PostInfo {
 	}
 
 	return listPosts
+}
+
+func EnlistUsers(arrayOfUsers []models.User) []string {
+	var usersList []string
+
+	for _, currentUser := range arrayOfUsers {
+		usersList = append(usersList, currentUser.Username)
+	}
+
+	return usersList
 }
 
 // Add a username field when change "UserID" to "Username" in the table.

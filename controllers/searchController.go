@@ -8,38 +8,42 @@ import (
 	"net/http"
 )
 
-func SearchUserHandler(db *gorm.DB) gin.HandlerFunc {
+func SearchHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username := c.Param("username")
-		if username == constants.Empty {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'username' parameter"})
-			return
-		}
-
-		users, err := user.SearchUserByUsername(db, username)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoUser})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"users": users})
-	}
-}
-
-func SearchPostHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		keyword := c.Query("search")
+		keyword := c.Query("q")
 		if keyword == constants.Empty {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'search' query parameter"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'q' query parameter"})
 			return
 		}
 
-		posts, err := user.SearchPostsByKeywords(db, keyword)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
+		filter := c.Query("f")
+		switch filter {
+		case constants.Empty:
+			posts, err := user.SearchPostsByKeywords(db, keyword)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"posts": posts})
 
-		c.JSON(http.StatusOK, gin.H{"posts": posts})
+		case "latest":
+			posts, err := user.SearchPostsByKeywordsSortedByLatest(db, keyword)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"posts": posts})
+
+		case "user":
+			users, err := user.SearchUserByUsername(db, keyword)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"users": users})
+
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter parameter."})
+		}
 	}
 }

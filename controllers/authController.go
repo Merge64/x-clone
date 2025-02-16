@@ -108,15 +108,14 @@ func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.SetSameSite(http.SameSiteLaxMode)
-		c.SetCookie("Authorization", tokenString, constants.MaxCookieAge, "/", "", false, true)
-
+		c.SetCookie("Authorization", tokenString, constants.MaxCookieAge, "/", constants.Empty, false, true)
 		c.JSON(http.StatusOK, gin.H{"token": tokenString})
 	}
 }
 
 func LogoutHandler(_ *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.SetCookie("Authorization", "", -1, "/", "", false, true)
+		c.SetCookie("Authorization", constants.Empty, -1, "/", constants.Empty, false, true)
 		c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 	}
 }

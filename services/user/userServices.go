@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"log"
 	"main/constants"
+	"main/mappers"
 	"main/models"
 	"regexp"
 )
@@ -103,23 +105,65 @@ func ToggleLike(db *gorm.DB, userID uint, parentID uint) (ToggleInfo, error) {
 	return toggleResult, nil
 }
 
-func SearchUserByUsername(db *gorm.DB, username string) ([]models.User, error) {
-	var users []models.User
-	result := db.Where("Username LIKE ?", username).First(&users)
-	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ErrNoUser)
-	}
-	return users, nil
-}
-
-func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
+// searchPostsByKeywords is a helper.
+func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post, error) {
 	var posts []models.Post
-	result := db.Where("Body ILIKE ?", "%"+keyword+"%").Find(&posts)
+	var result *gorm.DB
+
+	if len(keyword) < constants.SearchedWordLen {
+		queryPattern := fmt.Sprintf("\\m%s\\M", keyword)
+		q := db.Where("body ~* ?", queryPattern)
+		if orderBy != constants.Empty {
+			q = q.Order(orderBy)
+		}
+		result = q.Find(&posts)
+	} else {
+		queryPattern := "%" + keyword + "%"
+		q := db.Where("body ILIKE ?", queryPattern)
+		if orderBy != constants.Empty {
+			q = q.Order(orderBy)
+		}
+		result = q.Find(&posts)
+	}
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
 	if result.RowsAffected == 0 {
 		return nil, fmt.Errorf(constants.ErrNoPost+" keyword used: %s", keyword)
 	}
 
 	return posts, nil
+}
+
+func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
+	return searchPostsByKeywords(db, keyword, "likes DESC")
+}
+
+func SearchPostsByKeywordsSortedByLatest(db *gorm.DB, keyword string) ([]models.Post, error) {
+	return searchPostsByKeywords(db, keyword, "created_at DESC")
+}
+
+func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, error) {
+	var users []models.User
+
+	result := db.
+		Where("username ILIKE ?", "%"+username+"%").
+		Order(clause.Expr{
+			SQL:  "CASE WHEN username = ? THEN 0 ELSE 1 END",
+			Vars: []interface{}{username},
+		}).
+		Find(&users)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if len(users) == 0 {
+		return nil, errors.New("no users found")
+	}
+
+	// Use the mapper to convert users to responses.
+	return mappers.MapUsersToResponses(users), nil
 }
 
 func GetAllPosts(db *gorm.DB) ([]models.Post, error) {

@@ -9,19 +9,19 @@ import (
 
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "signup",
+	Path:            constants.InitialURLAuth + "/signup",
 	HandlerFunction: SignUpHandler,
 }
 
 var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "login",
+	Path:            constants.InitialURLAuth + "/login",
 	HandlerFunction: LoginHandler,
 }
 
 var UserLogoutEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "logout",
+	Path:            constants.InitialURLAuth + "/logout",
 	HandlerFunction: LogoutHandler,
 }
 
@@ -29,25 +29,25 @@ var UserLogoutEndpoint = models.Endpoint{
 
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLProfile + ":username",
+	Path:            constants.InitialURLProfile + "/:username",
 	HandlerFunction: ViewUserProfileHandler,
 }
 
 var EditUserProfileEndpoint = models.Endpoint{
 	Method:          models.PUT,
-	Path:            constants.InitialURLProfile + "edit",
+	Path:            constants.InitialURLProfile + "/edit",
 	HandlerFunction: EditUserProfileHandler,
 }
 
 var GetFollowingProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLProfile + ":username/following",
+	Path:            constants.InitialURLProfile + "/:username/following",
 	HandlerFunction: GetFollowingProfileHandler,
 }
 
 var GetFollowersProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLProfile + ":username/followers",
+	Path:            constants.InitialURLProfile + "/:username/followers",
 	HandlerFunction: GetFollowersProfileHandler,
 }
 
@@ -95,12 +95,6 @@ var DeletePostEndpoint = models.Endpoint{
 	HandlerFunction: DeletePostHandler,
 }
 
-var CreateRepostEndpoint = models.Endpoint{
-	Method:          models.POST,
-	Path:            constants.InitialURL + "posts/:parentid/repost",
-	HandlerFunction: CreateRepostHandler,
-}
-
 var ToggleLikeEndPoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.InitialURLPosts + "/:postid/like",
@@ -109,18 +103,14 @@ var ToggleLikeEndPoint = models.Endpoint{
 
 // TODO Search Endpoints
 
-var SearchPostEndpoint = models.Endpoint{
-	Method:          models.GET,
-	Path:            constants.InitialURL + "posts/asdasd",
-	HandlerFunction: SearchPostHandler,
-}
+// SearchEndpoint GET /search?q=keyword
+// SearchEndpoint GET /search?q=keyword&f=user
+// SearchEndpoint GET /search?q=keyword&f=user
 
-// TODO SearchLatestPost
-
-var SearchUserEndpoint = models.Endpoint{
+var SearchEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "search/:username",
-	HandlerFunction: SearchUserHandler,
+	Path:            constants.InitialURLSearch, // e.g. "/search"
+	HandlerFunction: SearchHandler,
 }
 
 // TODO Direct Messaging
@@ -159,8 +149,7 @@ var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
 	ViewUserProfileEndpoint,
-	SearchUserEndpoint,
-	SearchPostEndpoint,
+	SearchEndpoint,
 	GetSpecificPostEndpoint,
 	GetAllPostsByUserIDEndpoint,
 	GetAllPostsEndpoint,

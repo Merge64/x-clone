@@ -24,7 +24,7 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listPosts := user.ProcessPosts(rawPosts)
+		listPosts := user.ProcessAllPosts(rawPosts)
 
 		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
@@ -78,7 +78,7 @@ func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listPosts := user.ProcessPosts(rawPosts)
+		listPosts := user.ProcessAllPosts(rawPosts)
 
 		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
@@ -138,7 +138,6 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// If this post is a repost (has a ParentID), do not allow editing the body. forbidden
 		if post.ParentID != nil {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
 			return
@@ -191,7 +190,6 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Parse the parent post id from the URL parameter.
 		parentIDStr := c.Param("postid")
 		parentID, err := strconv.Atoi(parentIDStr)
 		if err != nil {
@@ -199,7 +197,6 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Get the current user's id from the context.
 		userIDVal, _ := c.Get("userID")
 		currentUserID, ok := userIDVal.(uint)
 		if !ok {

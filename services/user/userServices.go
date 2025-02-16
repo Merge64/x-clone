@@ -385,12 +385,12 @@ func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content s
 	return db.Create(&message).Error
 }
 
-func ProcessPosts(rawPosts []models.Post) []ListPosts {
+func ProcessAllPosts(rawPosts []models.Post) []ListPosts {
 	var listPosts []ListPosts
 
 	for _, post := range rawPosts {
 		var currentPost struct {
-			UserID   uint    `json:"userid"`
+			UserID   uint    `json:"userid"` // Change to username in table
 			ParentID *uint   `json:"parentid"`
 			Quote    *string `json:"quote"`
 			Body     string  `json:"body"`
@@ -411,6 +411,7 @@ func ProcessPost(post models.Post) PostInfo {
 	return PostInfo{ParentID: post.ParentID, Quote: post.Quote, Body: post.Body}
 }
 
+// Add a username field when change "UserID" to "Username" in the table.
 type PostInfo struct {
 	ParentID *uint   `json:"parentid"`
 	Quote    *string `json:"quote"`

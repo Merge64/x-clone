@@ -8,6 +8,7 @@ const InitialURLAuth = "/i/flow"
 const InitialURLPosts = "/posts"
 const InitialURLProfile = "/profile"
 const InitialURLSearch = "/search"
+const InitialURLDms = "/messages"
 
 const ExpDate = 720
 const MaxCookieAge = 3600

@@ -20,14 +20,14 @@ type Follow struct {
 
 type Conversation struct {
 	gorm.Model
-	SenderID   uint
-	ReceiverID uint
-	Messages   []Message
+	SenderID   uint      `json:"sender_id"`
+	ReceiverID uint      `json:"receiver_id"`
+	Messages   []Message `json:"messages"`
 }
 
 type Message struct {
 	gorm.Model
-	ConversationID uint   `gorm:"index;not null"`
-	SenderID       uint   `gorm:"index;not null"`
-	Content        string `gorm:"type:text;not null"`
+	ConversationID uint   `json:"conversation_id" gorm:"index;not null"`
+	SenderID       uint   `json:"sender_id" gorm:"index;not null"`
+	Content        string `json:"content" gorm:"type:text;not null"`
 }

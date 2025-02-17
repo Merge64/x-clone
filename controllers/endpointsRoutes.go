@@ -105,11 +105,11 @@ var ToggleLikeEndPoint = models.Endpoint{
 
 // SearchEndpoint GET /search?q=keyword
 // SearchEndpoint GET /search?q=keyword&f=user
-// SearchEndpoint GET /search?q=keyword&f=user
+// SearchEndpoint GET /search?q=keyword&f=latest
 
 var SearchEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLSearch, // e.g. "/search"
+	Path:            constants.InitialURLSearch,
 	HandlerFunction: SearchHandler,
 }
 
@@ -117,25 +117,25 @@ var SearchEndpoint = models.Endpoint{
 
 var ListConversationsEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "conversations/listall",
+	Path:            constants.InitialURLDms,
 	HandlerFunction: ListConversationsHandler,
 }
 
 var GetConversationMessagesEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURL + "conversations/:conversationID/messages",
+	Path:            constants.InitialURLDms + "/:receiverID/:senderID",
 	HandlerFunction: GetMessagesForConversationHandler,
 }
 
 var SendDirectMessageEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURL + "conversations/users/:userid/message",
+	Path:            constants.InitialURLDms + "/dm",
 	HandlerFunction: SendMessageHandler,
 }
 
 var FollowUserEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURL + "follow/:userid",
+	Path:            constants.InitialURLDms + "follow/:userid",
 	HandlerFunction: FollowUserHandler,
 }
 

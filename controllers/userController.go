@@ -9,6 +9,7 @@ import (
 	"main/services/user"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {
@@ -55,28 +56,38 @@ func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 
 func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		senderVal, _ := c.Get("userID")
+		senderVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
 		senderID, ok := senderVal.(uint)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid userID in context"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
 			return
 		}
 
-		receiverStr := c.Param("userid")
-		receiverInt, err := strconv.Atoi(receiverStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		var payload struct {
+			ReceiverID uint   `json:"receiver_id" binding:"required"`
+			Message    string `json:"message" binding:"required"`
+		}
+
+		if err := c.ShouldBind(&payload); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing receiver_id or message in request"})
 			return
 		}
-		receiverID := uint(receiverInt)
 
-		message := c.PostForm("message")
-		if message == constants.Empty {
+		if strings.TrimSpace(payload.Message) == constants.Empty {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Message content cannot be empty"})
 			return
 		}
 
-		if errMsg := user.SendMessage(db, senderID, receiverID, message); errMsg != nil {
+		if senderID == payload.ReceiverID {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot send a message to yourself"})
+			return
+		}
+
+		if err := user.SendMessage(db, senderID, payload.ReceiverID, payload.Message); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not send message"})
 			return
 		}
@@ -87,57 +98,82 @@ func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
 
 func ListConversationsHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUserVal, _ := c.Get("userID")
-		currentUserID, _ := currentUserVal.(uint)
-
-		type ConvID struct {
-			ID uint `json:"id"`
+		currentUserVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
 		}
-		var conversationIDs []ConvID
-
-		if err := db.Model(&models.Conversation{}).
-			Select("ID").
-			Where("sender_id = ? OR receiver_id = ?", currentUserID, currentUserID).
-			Scan(&conversationIDs).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversation IDs"})
+		currentUserID, ok := currentUserVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
 			return
 		}
 
-		c.JSON(http.StatusOK, conversationIDs)
+		var conversations []models.Conversation
+		err := db.Model(&models.Conversation{}).
+			Joins("LEFT JOIN messages ON messages.conversation_id = conversations.id").
+			Where("conversations.sender_id = ? OR conversations.receiver_id = ?", currentUserID, currentUserID).
+			Group("conversations.id").
+			Order("COALESCE(MAX(messages.created_at), conversations.created_at) desc").
+			Preload("Messages", func(db *gorm.DB) *gorm.DB {
+				return db.Order("created_at desc").Limit(1)
+			}).
+			Find(&conversations).Error
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversations"})
+			return
+		}
+
+		c.JSON(http.StatusOK, conversations)
 	}
 }
 
 func GetMessagesForConversationHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUserVal, _ := c.Get("userID")
-		currentUserID, _ := currentUserVal.(uint)
+		currentUserVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		currentUserID, ok := currentUserVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
+			return
+		}
 
-		convoIDStr := c.Param("conversationID")
-		convoIDInt, err := strconv.Atoi(convoIDStr)
+		receiverIDStr := c.Param("receiverID")
+		senderIDStr := c.Param("senderID")
+
+		receiverIDInt, err := strconv.Atoi(receiverIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid receiver ID"})
 			return
 		}
-		convoID := uint(convoIDInt)
+		senderIDInt, err := strconv.Atoi(senderIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sender ID"})
+			return
+		}
+		receiverID := uint(receiverIDInt)
+		senderID := uint(senderIDInt)
 
-		var conversation models.Conversation
-		if errDB := db.First(&conversation, convoID).Error; errDB != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
-			return
-		}
-		if conversation.SenderID != currentUserID && conversation.ReceiverID != currentUserID {
+		if currentUserID != receiverID && currentUserID != senderID {
 			c.JSON(http.StatusForbidden, gin.H{"error": "You are not a participant in this conversation"})
 			return
 		}
 
-		var messages []models.Message
-		if errDB := db.Where("conversation_id = ?", conversation.ID).
-			Order("created_at asc").
-			Find(&messages).Error; errDB != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve messages"})
+		var conversation models.Conversation
+		if errDB := db.Preload("Messages", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at desc")
+		}).Where(
+			"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
+			senderID, receiverID, receiverID, senderID,
+		).First(&conversation).Error; errDB != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
 			return
 		}
 
-		c.JSON(http.StatusOK, messages)
+		c.JSON(http.StatusOK, conversation)
 	}
 }

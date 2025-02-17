@@ -252,8 +252,6 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-// TODO: Implement Share post
-
 func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, _ := c.Get("userID")
@@ -274,6 +272,21 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unlike post"})
 			}
 			return
+		}
+
+		var post models.Post
+		if err := db.First(&post, postID).Error; err == nil {
+			if toggleResult.IsLiked {
+				post.LikesCount++
+			} else {
+				if post.LikesCount > 0 {
+					post.LikesCount--
+				}
+			}
+
+			if errDB := db.Save(&post).Error; errDB != nil {
+				log.Println("Failed to update likes_count:", errDB)
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": toggleResult.MessageStatus})

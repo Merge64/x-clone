@@ -29,6 +29,12 @@ func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
+		if err := db.Model(&models.User{}).
+			Where("id = ?", followedUserID).
+			UpdateColumn("follower_count", gorm.Expr("follower_count + 1")).Error; err != nil {
+			log.Println("Failed to increment follower_count:", err)
+		}
+
 		c.JSON(http.StatusOK, gin.H{"message": "Followed user successfully"})
 	}
 }
@@ -48,6 +54,12 @@ func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 			log.Println("Unfollow error:", unfollowErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unfollow user"})
 			return
+		}
+
+		if err := db.Model(&models.User{}).
+			Where("id = ?", followedUserID).
+			UpdateColumn("follower_count", gorm.Expr("follower_count - 1")).Error; err != nil {
+			log.Println("Failed to decrement follower_count:", err)
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Unfollowed user successfully"})

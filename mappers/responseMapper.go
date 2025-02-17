@@ -3,15 +3,17 @@ package mappers
 import "main/models"
 
 type Response struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
+	ID            uint   `json:"id"`
+	Username      string `json:"username"`
+	FollowerCount uint   `json:"follower_count"`
 }
 
 // MapUserToResponse converts ONLY ONE models.User to a Response.
 func MapUserToResponse(u models.User) Response {
 	return Response{
-		ID:       u.ID,
-		Username: u.Username,
+		ID:            u.ID,
+		Username:      u.Username,
+		FollowerCount: u.FollowerCount,
 	}
 }
 

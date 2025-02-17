@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"log"
 	"main/constants"
 	"main/mappers"
@@ -31,23 +30,22 @@ func CreateAccount(db *gorm.DB, username, password, mail string, location *strin
 	return nil
 }
 
-func FollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
-	if followingUserID == followedUserID {
-		return errors.New("invalid ID: user cannot follow themselves")
+func FollowAccount(db *gorm.DB, followingID, followedUserID uint) error {
+	// 1. Check if the user is already following
+	var existing models.Follow
+	if err := db.Where("following_user_id = ? AND followed_user_id = ?",
+		followingID, followedUserID).
+		First(&existing).Error; err == nil {
+		return fmt.Errorf("already following this user")
 	}
 
-	if alreadyFollows(db, followingUserID, followedUserID) {
-		return errors.New("user already follows this account")
-	}
-
+	// 2. Create a new Follow record
 	follow := models.Follow{
-		FollowingUserID: followingUserID,
+		FollowingUserID: followingID,
 		FollowedUserID:  followedUserID,
 	}
-
 	if err := db.Create(&follow).Error; err != nil {
-		log.Printf("Error creating follow record: %v", err)
-		return err
+		return err // This error triggers "Failed to follow user"
 	}
 
 	return nil
@@ -73,15 +71,15 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func ToggleLike(db *gorm.DB, userID uint, parentID uint) (ToggleInfo, error) {
+func ToggleLike(db *gorm.DB, userID uint, PostID uint) (ToggleInfo, error) {
 	if !userExists(db, userID) {
 		return ToggleInfo{}, errors.New(constants.ErrNoUser)
 	}
 
 	var toggleResult ToggleInfo
 	var currentUser models.Like
-	if isLiked(db, userID, parentID) {
-		db.Model(models.Like{}).First(&currentUser, "user_id = ? AND parent_id = ?", userID, parentID)
+	if isLiked(db, userID, PostID) {
+		db.Model(models.Like{}).First(&currentUser, "user_id = ? AND post_id = ?", userID, PostID)
 		db.Model(models.Like{}).Delete(&currentUser)
 
 		toggleResult = ToggleInfo{
@@ -90,9 +88,9 @@ func ToggleLike(db *gorm.DB, userID uint, parentID uint) (ToggleInfo, error) {
 		}
 	} else {
 		currentUser = models.Like{
-			Model:    gorm.Model{},
-			ParentID: parentID,
-			UserID:   userID,
+			Model:  gorm.Model{},
+			PostID: PostID,
+			UserID: userID,
 		}
 		db.Model(models.Like{}).Create(&currentUser)
 
@@ -137,7 +135,7 @@ func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post,
 }
 
 func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
-	return searchPostsByKeywords(db, keyword, "likes DESC")
+	return searchPostsByKeywords(db, keyword, "likes_count DESC")
 }
 
 func SearchPostsByKeywordsSortedByLatest(db *gorm.DB, keyword string) ([]models.Post, error) {
@@ -146,14 +144,21 @@ func SearchPostsByKeywordsSortedByLatest(db *gorm.DB, keyword string) ([]models.
 
 func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, error) {
 	var users []models.User
-
-	result := db.
-		Where("username ILIKE ?", "%"+username+"%").
-		Order(clause.Expr{
-			SQL:  "CASE WHEN username = ? THEN 0 ELSE 1 END",
-			Vars: []interface{}{username},
-		}).
-		Find(&users)
+	result := db.Table("users").
+		Select(`
+            users.id, 
+            users.username,
+            users.mail,
+            users.password,
+            users.location,
+            COUNT(follows.id) AS follower_count,
+            CASE WHEN LOWER(users.username) = LOWER(?) THEN 0 ELSE 1 END AS priority
+        `, username).
+		Joins("LEFT JOIN follows ON follows.followed_user_id = users.id").
+		Where("users.username ILIKE ?", "%"+username+"%").
+		Group("users.id, users.username, users.mail, users.password, users.location, priority").
+		Order("priority ASC, follower_count DESC").
+		Scan(&users)
 
 	if result.Error != nil {
 		return nil, result.Error
@@ -162,7 +167,6 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, err
 		return nil, errors.New("no users found")
 	}
 
-	// Use the mapper to convert users to responses.
 	return mappers.MapUsersToResponses(users), nil
 }
 
@@ -350,8 +354,8 @@ func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
 	return true
 }
 
-func isLiked(db *gorm.DB, userID, parentID uint) bool {
-	result := db.Model(models.Like{}).Where("user_id = ? AND parent_id = ?", userID, parentID).First(&models.Like{})
+func isLiked(db *gorm.DB, userID, postID uint) bool {
+	result := db.Model(models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).First(&models.Like{})
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return false

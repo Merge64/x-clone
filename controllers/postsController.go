@@ -168,56 +168,8 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		userIDVal, _ := c.Get("userID")
-		currentUserID, ok := userIDVal.(uint)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
-			return
-		}
-
-		var req struct {
-			Quote string `json:"quote"`
-		}
-		if errJSON := c.ShouldBindJSON(&req); errJSON != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
-			return
-		}
-
-		var parentPost models.Post
-		if errDB := db.First(&parentPost, parentID).Error; errDB != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
-			return
-		}
-
-		if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
-			var originalPost models.Post
-			if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Original post not found"})
-				return
-			}
-			parentPost = originalPost
-		}
-
-		rawRepost := models.Post{
-			UserID:   currentUserID,
-			ParentID: &parentPost.ID,
-			Body:     parentPost.Body,
-		}
-		if req.Quote != constants.Empty {
-			rawRepost.Quote = &req.Quote
-		}
-
-		if errDB := db.Create(&rawRepost).Error; errDB != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create repost"})
-			return
-		}
-
-		repost := user.ProcessPosts([]models.Post{rawRepost})
-
-		c.JSON(http.StatusCreated, gin.H{
-			"message": "Repost created successfully",
-			"post":    repost,
-		})
+		repostError := createRepost(c, db, parentID)
+		c.JSON(repostError.Status, repostError.Message)
 	}
 }
 
@@ -247,8 +199,6 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-// TODO: Implement Share post
-
 // AUX.
 func getUserIDFromContext(c *gin.Context) (uint, error) {
 	userIDStr, exists := c.Get("userID")
@@ -263,6 +213,8 @@ func getUserIDFromContext(c *gin.Context) (uint, error) {
 
 	return userID, nil
 }
+
+// TODO: Implement Share post
 
 func validatePostBody(body string) error {
 	if body == constants.Empty {
@@ -306,6 +258,51 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 		return PostError{Message: gin.H{"error": "Failed to update post"}, Status: http.StatusInternalServerError}
 	}
 	return PostError{Message: gin.H{"message": "Post updated successfully"}, Status: http.StatusOK}
+}
+
+func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
+	userIDVal, _ := c.Get("userID")
+	currentUserID, ok := userIDVal.(uint)
+	if !ok {
+		return PostError{Message: gin.H{"error": "Invalid user ID type"}, Status: http.StatusInternalServerError}
+	}
+
+	var req struct {
+		Quote string `json:"quote"`
+	}
+	if errJSON := c.ShouldBindJSON(&req); errJSON != nil {
+		return PostError{Message: gin.H{"error": "Invalid JSON payload"}, Status: http.StatusBadRequest}
+	}
+
+	var parentPost models.Post
+	if errDB := db.First(&parentPost, parentID).Error; errDB != nil {
+		return PostError{Message: gin.H{"error": "Original post not found"}, Status: http.StatusNotFound}
+	}
+
+	if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
+		var originalPost models.Post
+		if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {
+			return PostError{Message: gin.H{"error": "Original post not found"}, Status: http.StatusNotFound}
+		}
+		parentPost = originalPost
+	}
+
+	rawRepost := models.Post{
+		UserID:   currentUserID,
+		ParentID: &parentPost.ID,
+		Body:     parentPost.Body,
+	}
+	if req.Quote != constants.Empty {
+		rawRepost.Quote = &req.Quote
+	}
+
+	if errDB := db.Create(&rawRepost).Error; errDB != nil {
+		return PostError{Message: gin.H{"error": "Failed to create repost"}, Status: http.StatusInternalServerError}
+	}
+
+	repost := user.ProcessPosts([]models.Post{rawRepost})
+
+	return PostError{Message: gin.H{"message": "Repost created successfully", "post": repost}, Status: http.StatusCreated}
 }
 
 type PostError struct {

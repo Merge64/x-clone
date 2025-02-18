@@ -135,27 +135,8 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if !user.IsPostOwner(db, currentUserID, uint(postID)) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
-			return
-		}
-
-		post, getPostErr := user.GetPostByID(db, uint(postID))
-		if getPostErr != nil {
-			if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
-			return
-		}
-
-		if deleteErr := db.Delete(&post).Error; deleteErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete post"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
+		postError := deletePost(db, currentUserID, postID)
+		c.JSON(postError.Status, postError.Message)
 	}
 }
 
@@ -214,14 +195,14 @@ func getUserIDFromContext(c *gin.Context) (uint, error) {
 	return userID, nil
 }
 
-// TODO: Implement Share post
-
 func validatePostBody(body string) error {
 	if body == constants.Empty {
 		return errors.New("body cannot be empty")
 	}
 	return nil
 }
+
+// TODO: Implement Share post
 
 func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, gin.H{"error": message})
@@ -303,6 +284,25 @@ func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
 	repost := user.ProcessPosts([]models.Post{rawRepost})
 
 	return PostError{Message: gin.H{"message": "Repost created successfully", "post": repost}, Status: http.StatusCreated}
+}
+
+func deletePost(db *gorm.DB, currentUserID uint, postID int) PostError {
+	if !user.IsPostOwner(db, currentUserID, uint(postID)) {
+		return PostError{Message: gin.H{"error": "You are not the owner of this post"}, Status: http.StatusUnauthorized}
+	}
+
+	post, getPostErr := user.GetPostByID(db, uint(postID))
+	if getPostErr != nil {
+		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
+			return PostError{Message: gin.H{"error": constants.ErrNoPost}, Status: http.StatusNotFound}
+		}
+		return PostError{Message: gin.H{"error": "An error occurred while fetching the post"}, Status: http.StatusInternalServerError}
+	}
+
+	if deleteErr := db.Delete(&post).Error; deleteErr != nil {
+		return PostError{Message: gin.H{"error": "Failed to delete post"}, Status: http.StatusInternalServerError}
+	}
+	return PostError{Message: gin.H{"message": "Post deleted successfully"}, Status: http.StatusOK}
 }
 
 type PostError struct {

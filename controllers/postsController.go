@@ -118,40 +118,9 @@ func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		var req models.Post
+		postError := editPost(c, db, postID)
 
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
-			return
-		}
-
-		if err := validatePostBody(req.Body); err != nil {
-			sendErrorResponse(c, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		post, getPostErr := user.GetPostByID(db, uint(postID))
-		if getPostErr != nil {
-			if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
-			return
-		}
-
-		if post.ParentID != nil {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
-			return
-		}
-
-		post.Body = req.Body
-		if db.Save(&post).Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Post updated successfully"})
+		c.JSON(postError.Status, postError.Message)
 	}
 }
 
@@ -274,24 +243,11 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		var post models.Post
-		if err := db.First(&post, postID).Error; err == nil {
-			if toggleResult.IsLiked {
-				post.LikesCount++
-			} else {
-				if post.LikesCount > 0 {
-					post.LikesCount--
-				}
-			}
-
-			if errDB := db.Save(&post).Error; errDB != nil {
-				log.Println("Failed to update likes_count:", errDB)
-			}
-		}
-
 		c.JSON(http.StatusOK, gin.H{"message": toggleResult.MessageStatus})
 	}
 }
+
+// TODO: Implement Share post
 
 // AUX.
 func getUserIDFromContext(c *gin.Context) (uint, error) {
@@ -317,4 +273,42 @@ func validatePostBody(body string) error {
 
 func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, gin.H{"error": message})
+}
+
+func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
+	var req models.Post
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return PostError{Message: gin.H{"error": "Invalid JSON: " + err.Error()}, Status: http.StatusBadRequest}
+	}
+
+	if err := validatePostBody(req.Body); err != nil {
+		return PostError{Message: gin.H{"error": err.Error()}, Status: http.StatusBadRequest}
+	}
+
+	post, getPostErr := user.GetPostByID(db, uint(postID))
+	if getPostErr != nil {
+		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
+			return PostError{Message: gin.H{"error": constants.ErrNoPost}, Status: http.StatusNotFound}
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
+		return PostError{Message: gin.H{"error": "An error occurred while fetching the post"}, Status: http.StatusInternalServerError}
+	}
+
+	if post.ParentID != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
+		return PostError{Message: gin.H{"error": "Cannot edit the body of a repost"}, Status: http.StatusForbidden}
+	}
+
+	post.Body = req.Body
+	if db.Save(&post).Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
+		return PostError{Message: gin.H{"error": "Failed to update post"}, Status: http.StatusInternalServerError}
+	}
+	return PostError{Message: gin.H{"message": "Post updated successfully"}, Status: http.StatusOK}
+}
+
+type PostError struct {
+	Message gin.H
+	Status  int
 }

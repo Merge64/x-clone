@@ -225,7 +225,10 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 			return PostError{Message: gin.H{"error": constants.ErrNoPost}, Status: http.StatusNotFound}
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
-		return PostError{Message: gin.H{"error": "An error occurred while fetching the post"}, Status: http.StatusInternalServerError}
+		return PostError{
+			Message: gin.H{"error": "An error occurred while fetching the post"},
+			Status:  http.StatusInternalServerError,
+		}
 	}
 
 	if post.ParentID != nil {
@@ -296,7 +299,10 @@ func deletePost(db *gorm.DB, currentUserID uint, postID int) PostError {
 		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
 			return PostError{Message: gin.H{"error": constants.ErrNoPost}, Status: http.StatusNotFound}
 		}
-		return PostError{Message: gin.H{"error": "An error occurred while fetching the post"}, Status: http.StatusInternalServerError}
+		return PostError{
+			Message: gin.H{"error": "An error occurred while fetching the post"},
+			Status:  http.StatusInternalServerError,
+		}
 	}
 
 	if deleteErr := db.Delete(&post).Error; deleteErr != nil {

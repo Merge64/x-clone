@@ -36,7 +36,7 @@ func FollowAccount(db *gorm.DB, followingID, followedUserID uint) error {
 	if err := db.Where("following_user_id = ? AND followed_user_id = ?",
 		followingID, followedUserID).
 		First(&existing).Error; err == nil {
-		return fmt.Errorf("already following this user")
+		return errors.New("already following this user")
 	}
 
 	// 2. Create a new Follow record
@@ -71,15 +71,15 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func ToggleLike(db *gorm.DB, userID uint, PostID uint) (ToggleInfo, error) {
+func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 	if !userExists(db, userID) {
 		return ToggleInfo{}, errors.New(constants.ErrNoUser)
 	}
 
 	var toggleResult ToggleInfo
 	var currentUser models.Like
-	if isLiked(db, userID, PostID) {
-		db.Model(models.Like{}).First(&currentUser, "user_id = ? AND post_id = ?", userID, PostID)
+	if isLiked(db, userID, postID) {
+		db.Model(models.Like{}).First(&currentUser, "user_id = ? AND post_id = ?", userID, postID)
 		db.Model(models.Like{}).Delete(&currentUser)
 
 		toggleResult = ToggleInfo{
@@ -89,7 +89,7 @@ func ToggleLike(db *gorm.DB, userID uint, PostID uint) (ToggleInfo, error) {
 	} else {
 		currentUser = models.Like{
 			Model:  gorm.Model{},
-			PostID: PostID,
+			PostID: postID,
 			UserID: userID,
 		}
 		db.Model(models.Like{}).Create(&currentUser)
@@ -337,20 +337,6 @@ func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
 		return false
 	}
 
-	return true
-}
-
-func alreadyFollows(db *gorm.DB, followingUserID, followedUserID uint) bool {
-	var follow models.Follow
-	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).First(&follow)
-
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return false
-		}
-		log.Printf("Error querying database: %v", result.Error)
-		return false
-	}
 	return true
 }
 

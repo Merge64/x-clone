@@ -63,6 +63,49 @@ func GetMessagesForConversationHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		senderVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		senderID, ok := senderVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
+			return
+		}
+
+		errorMessage := sendMessage(c, senderID, db)
+		c.JSON(errorMessage.Status, errorMessage.Message)
+	}
+}
+
+func ListConversationsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUserVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		currentUserID, ok := currentUserVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
+			return
+		}
+
+		var conversations []models.Conversation
+		err := getConversation(db, currentUserID, conversations)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversations"})
+			return
+		}
+
+		c.JSON(http.StatusOK, conversations)
+	}
+}
+
 // Aux
 
 func toggleFollow(db *gorm.DB, c *gin.Context, isFollowing bool) {
@@ -147,6 +190,18 @@ func preloadMessages(db *gorm.DB, senderID uint, receiverID uint, conversation m
 		"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
 		senderID, receiverID, receiverID, senderID,
 	).First(&conversation).Error
+}
+
+func getConversation(db *gorm.DB, currentUserID uint, conversations []models.Conversation) error {
+	return db.Model(&models.Conversation{}).
+		Joins("LEFT JOIN messages ON messages.conversation_id = conversations.id").
+		Where("conversations.sender_id = ? OR conversations.receiver_id = ?", currentUserID, currentUserID).
+		Group("conversations.id").
+		Order("COALESCE(MAX(messages.created_at), conversations.created_at) desc").
+		Preload("Messages", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at desc").Limit(1)
+		}).
+		Find(&conversations).Error
 }
 
 type ErrorMessage struct {

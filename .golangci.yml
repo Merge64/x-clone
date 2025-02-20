@@ -16,9 +16,6 @@ run:
 # This file contains only configs which differ from defaults.
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
-  golint:
-    skip-dirs:
-      - gorm.io/gorm
   cyclop:
     # The maximal code complexity to report.
     # Default: 10
@@ -241,7 +238,7 @@ linters:
     - asciicheck # checks that your code does not contain non-ASCII identifiers
     - bidichk # checks for dangerous unicode character sequences
     - bodyclose # checks whether HTTP response body is closed successfully
-    - canonicalheader # checks whether net/http.Header uses canonical header
+    - canonicalheader # checks whether net/http/Header uses canonical header
     - copyloopvar # detects places where loop variables are copied (Go 1.22+)
     - cyclop # checks function and package cyclomatic complexity
     - dupl # tool for code clone detection

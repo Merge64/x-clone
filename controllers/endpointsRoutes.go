@@ -25,8 +25,6 @@ var UserLogoutEndpoint = models.Endpoint{
 	HandlerFunction: LogoutHandler,
 }
 
-// TODO User Profile Endpoints
-
 var ViewUserProfileEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLProfile + "/:username",
@@ -50,8 +48,6 @@ var GetFollowersProfileEndpoint = models.Endpoint{
 	Path:            constants.InitialURLProfile + "/:username/followers",
 	HandlerFunction: GetFollowersProfileHandler,
 }
-
-// TODO Post Endpoints
 
 var GetAllPostsEndpoint = models.Endpoint{
 	Method:          models.GET,
@@ -101,8 +97,7 @@ var ToggleLikeEndPoint = models.Endpoint{
 	HandlerFunction: ToggleLikeHandler,
 }
 
-// TODO Search Endpoints
-
+// Querystring parameters
 // SearchEndpoint GET /search?q=keyword
 // SearchEndpoint GET /search?q=keyword&f=user
 // SearchEndpoint GET /search?q=keyword&f=latest
@@ -112,8 +107,6 @@ var SearchEndpoint = models.Endpoint{
 	Path:            constants.InitialURLSearch,
 	HandlerFunction: SearchHandler,
 }
-
-// TODO Direct Messaging
 
 var ListConversationsEndpoint = models.Endpoint{
 	Method:          models.GET,

@@ -12,13 +12,14 @@ import (
 	"regexp"
 )
 
-func CreateAccount(db *gorm.DB, username, password, mail string, location *string) error {
+func CreateAccount(db *gorm.DB, nickname, username, password, mail string, location *string) error {
 	if password == constants.Empty || username == constants.Empty {
 		return errors.New("fields must not be empty")
 	}
 
 	var currentUser = models.User{
 		Model:    gorm.Model{},
+		Nickname: nickname,
 		Username: username,
 		Mail:     mail,
 		Location: location,
@@ -147,6 +148,7 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, err
 	result := db.Table("users").
 		Select(`
             users.id, 
+			users.nickname,
             users.username,
             users.mail,
             users.password,
@@ -156,7 +158,7 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, err
         `, username).
 		Joins("LEFT JOIN follows ON follows.followed_user_id = users.id").
 		Where("users.username ILIKE ?", "%"+username+"%").
-		Group("users.id, users.username, users.mail, users.password, users.location, priority").
+		Group("users.id, users.nickname, users.username, users.mail, users.password, users.location, priority").
 		Order("priority ASC, follower_count DESC").
 		Scan(&users)
 
@@ -279,8 +281,8 @@ func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
 }
 
 func UpdateProfile(db *gorm.DB, user *models.User) error {
-	hashedPassword, hasedPasswordErr := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if hasedPasswordErr != nil {
+	hashedPassword, hashedPasswordErr := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if hashedPasswordErr != nil {
 		return errors.New("failed to hash password")
 	}
 	user.Password = string(hashedPassword)

@@ -16,6 +16,7 @@ import (
 func SignUpHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
+			Nickname string `json:"nickname" binding:"required"`
 			Username string `json:"username" binding:"required"`
 			Password string `json:"password" binding:"required"`
 			Mail     string `json:"mail" binding:"required"`
@@ -58,7 +59,7 @@ func SignUpHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if user.CreateAccount(db, req.Username, string(hashedPassword), req.Mail, locationAux) != nil {
+		if user.CreateAccount(db, req.Nickname, req.Username, string(hashedPassword), req.Mail, locationAux) != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid parameters to create an account"})
 			return
 		}

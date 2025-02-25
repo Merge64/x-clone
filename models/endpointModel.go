@@ -1,8 +1,8 @@
 package models
 
 import (
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"net/http"
 )
 
 const (
@@ -15,5 +15,5 @@ const (
 type Endpoint struct {
 	Method          string
 	Path            string
-	HandlerFunction func(w http.ResponseWriter, r *http.Request, db *gorm.DB)
+	HandlerFunction func(db *gorm.DB) gin.HandlerFunc
 }

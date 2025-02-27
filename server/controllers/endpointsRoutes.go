@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"main/authentication"
 	"main/constants"
 	"main/models"
 )
@@ -9,19 +10,19 @@ import (
 
 var UserSignUpEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "/signup",
+	Path:            constants.InitialURLi + "/signup",
 	HandlerFunction: SignUpHandler,
 }
 
 var UserLoginEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "/login",
+	Path:            constants.InitialURLi + "/login",
 	HandlerFunction: LoginHandler,
 }
 
 var UserLogoutEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "/logout",
+	Path:            constants.InitialURLi + "/logout",
 	HandlerFunction: LogoutHandler,
 }
 
@@ -100,6 +101,7 @@ var ToggleLikeEndPoint = models.Endpoint{
 // Querystring parameters
 // SearchEndpoint GET /search?q=keyword
 // SearchEndpoint GET /search?q=keyword&f=user
+// SearchEndpoint GET /search?q=keyword&f=unique-user
 // SearchEndpoint GET /search?q=keyword&f=latest
 
 var SearchEndpoint = models.Endpoint{
@@ -138,6 +140,18 @@ var UnfollowUserEndpoint = models.Endpoint{
 	HandlerFunction: UnfollowUserHandler,
 }
 
+var ValidateTokenEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLAuth + "validate",
+	HandlerFunction: authentication.ValidateHandler,
+}
+
+var ExpireTokenEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURLAuth + "logout",
+	HandlerFunction: LogoutHandler,
+}
+
 var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
@@ -146,6 +160,8 @@ var PublicEndpoints = []models.Endpoint{
 	GetSpecificPostEndpoint,
 	GetAllPostsByUserIDEndpoint,
 	GetAllPostsEndpoint,
+	ValidateTokenEndpoint,
+	ExpireTokenEndpoint,
 }
 
 var PrivateEndpoints = []models.Endpoint{

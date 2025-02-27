@@ -18,7 +18,7 @@ func SearchHandler(db *gorm.DB) gin.HandlerFunc {
 
 		filter := c.Query("f")
 		switch filter {
-		case constants.Empty:
+		case "":
 			posts, err := user.SearchPostsByKeywords(db, keyword)
 			if err != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -35,15 +35,31 @@ func SearchHandler(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusOK, gin.H{"posts": posts})
 
 		case "user":
-			users, err := user.SearchUserByUsername(db, keyword)
+			users, err := user.SearchUsersByUsername(db, keyword)
 			if err != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"users": users})
 
+		case "unique-user":
+			exists, err := user.SearchUniqueMailUsername(db, "username", keyword)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"exists": exists})
+
+		case "unique-mail":
+			exists, err := user.SearchUniqueMailUsername(db, "mail", keyword)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"exists": exists})
+
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter parameter."})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter parameter"})
 		}
 	}
 }

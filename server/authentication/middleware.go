@@ -47,6 +47,26 @@ func getUserFromToken(db *gorm.DB, tokenString string) (*models.User, error) {
 	return &currentUser, nil
 }
 
+func ValidateHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString, err := c.Cookie("Authorization")
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		_, err = getUserFromToken(db, tokenString)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Valid token",
+		})
+	}
+}
+
 func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString, err := c.Cookie("Authorization")

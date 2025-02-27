@@ -1,16 +1,11 @@
-// views/LoginSignupPage.tsx
-import React from 'react';
 import { Outlet } from 'react-router-dom';
-import MainBackground from '../components/MainBackground';
+import MainBackground from '../components/AuthBackground';
 
 function LoginSignupPage() {
   return (
     <>
-      {/* Show your main background layout */}
       <MainBackground />
-
-      {/* Where nested routes (the modals) get injected */}
-      <Outlet />
+      <Outlet /> {/* This will render the modals */}
     </>
   );
 }

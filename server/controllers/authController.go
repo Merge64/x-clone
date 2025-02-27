@@ -81,13 +81,14 @@ func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		var u models.User
-		if err := db.Where("username = ? OR mail = ?", req.UsernameOrEmail, req.UsernameOrEmail).First(&u).Error; err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		if err := db.Where("username = LOWER(?) OR mail = LOWER(?)",
+			req.UsernameOrEmail, req.UsernameOrEmail).First(&u).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credentials"})
 			return
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credentials"})
 			return
 		}
 

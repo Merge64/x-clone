@@ -143,7 +143,7 @@ func SearchPostsByKeywordsSortedByLatest(db *gorm.DB, keyword string) ([]models.
 	return searchPostsByKeywords(db, keyword, "created_at DESC")
 }
 
-func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, error) {
+func SearchUsersByUsername(db *gorm.DB, username string) ([]mappers.Response, error) {
 	var users []models.User
 	result := db.Table("users").
 		Select(`
@@ -170,6 +170,15 @@ func SearchUserByUsername(db *gorm.DB, username string) ([]mappers.Response, err
 	}
 
 	return mappers.MapUsersToResponses(users), nil
+}
+
+func SearchUniqueMailUsername(db *gorm.DB, field string, value string) (bool, error) {
+	var count int64
+	err := db.Model(&models.User{}).Where("LOWER("+field+") = LOWER(?)", value).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func GetAllPosts(db *gorm.DB) ([]models.Post, error) {

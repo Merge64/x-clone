@@ -2,6 +2,7 @@ package startup
 
 import (
 	"fmt"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -12,10 +13,20 @@ import (
 	"main/controllers"
 	"main/models"
 	"os"
+	"time"
 )
 
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	router := gin.Default()
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"}, // Allow frontend
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           constants.MaxAgeRouter * time.Hour,
+	}))
 
 	public := router.Group("/api")
 	{

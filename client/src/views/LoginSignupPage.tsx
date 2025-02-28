@@ -1,10 +1,10 @@
 import { Outlet } from 'react-router-dom';
-import MainBackground from '../components/AuthBackground';
+import AuthBackground from '../components/AuthBackground';
 
 function LoginSignupPage() {
   return (
     <>
-      <MainBackground />
+      <AuthBackground />
       <Outlet /> {/* This will render the modals */}
     </>
   );

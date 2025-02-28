@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginSignupPage from './views/LoginSignupPage';
 import LoginModal from './components/LoginModal';
-import SignupModal from './components/SignupModal';
+import ChangeUsername from './components/ChangeUsername';
 import HomePage from './views/HomePage';
 import AuthChecker from './utils/AuthChecker';
+import SignupModal from './components/SignupModal';
 
 function App() {
   return (
@@ -19,6 +20,11 @@ function App() {
         <Route path="/home" element={
           <AuthChecker>
             <HomePage />
+          </AuthChecker>
+        } />
+          <Route path="/c" element={
+          <AuthChecker>
+            <ChangeUsername />
           </AuthChecker>
         } />
         

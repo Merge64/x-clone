@@ -189,7 +189,7 @@ function LoginModal() {
           </div>
 
           <h1 className="text-2xl font-bold text-white text-center mb-8">
-            Sign in to X
+            Sign in to X-clone
           </h1>
 
           {loginError && (

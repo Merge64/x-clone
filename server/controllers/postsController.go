@@ -149,16 +149,8 @@ func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
 func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postID, atoiErr := strconv.Atoi(c.Param("postid"))
-		userID, _ := c.Get("userID")
-		currentUserID, _ := userID.(uint)
-
 		if atoiErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
-			return
-		}
-
-		if !user.IsPostOwner(db, currentUserID, uint(postID)) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
 			return
 		}
 
@@ -281,14 +273,12 @@ func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 	var req models.Post
 
+	// Parse the request body
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return PostError{Message: gin.H{"error": "Invalid JSON: " + err.Error()}, Status: http.StatusBadRequest}
 	}
 
-	if err := validatePostBody(req.Body); err != nil {
-		return PostError{Message: gin.H{"error": err.Error()}, Status: http.StatusBadRequest}
-	}
-
+	// Fetch the post to edit
 	post, getPostErr := user.GetPostByID(db, uint(postID))
 	if getPostErr != nil {
 		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
@@ -301,16 +291,29 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 		}
 	}
 
-	if post.ParentID != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
-		return PostError{Message: gin.H{"error": "Cannot edit the body of a repost"}, Status: http.StatusForbidden}
+	// Ensure the current user is the owner of the post
+	userID, _ := c.Get("userID")
+	currentUserID, _ := userID.(uint)
+	if post.UserID != currentUserID {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
+		return PostError{Message: gin.H{"error": "You are not the owner of this post"}, Status: http.StatusUnauthorized}
 	}
 
-	post.Body = req.Body
+	// Allow editing of either the body, the quote, or both
+	if req.Body != "" {
+		post.Body = req.Body
+	}
+
+	if req.Quote != nil {
+		post.Quote = req.Quote
+	}
+
+	// Save the updated post to the database
 	if db.Save(&post).Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
 		return PostError{Message: gin.H{"error": "Failed to update post"}, Status: http.StatusInternalServerError}
 	}
+
 	return PostError{Message: gin.H{"message": "Post updated successfully"}, Status: http.StatusOK}
 }
 
@@ -349,7 +352,7 @@ func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
 		UserID:   currentUserID,
 		ParentID: &parentPost.ID,
 		Username: username,
-		Body:     parentPost.Body,
+		Body:     "",
 		Quote:    &payload.Quote,
 		Nickname: nickname,
 		IsRepost: true,

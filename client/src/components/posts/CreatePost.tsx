@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { createPost } from '../utils/api';
-import { getUserInfo } from '../utils/api';
+import { createPost } from '../../utils/api';
+import { getUserInfo } from '../../utils/api';
 
 interface CreatePostProps {
   onPostCreated: () => void;

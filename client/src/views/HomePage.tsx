@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getAllPosts } from '../utils/api';
 import Layout from '../components/Layout';
-import CreatePost from '../components/CreatePost';
-import PostList from '../components/PostList';
+import CreatePost from '../components/posts/CreatePost';
+import PostList from '../components/posts/PostList';
 
 function HomePage() {
   const [posts, setPosts] = useState<any[]>([]);

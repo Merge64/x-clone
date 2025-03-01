@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Repeat, Heart, Share, MoreHorizontal } from 'lucide-react';
-import { repostPost, deletePost, editPost, getUserInfo } from '../utils/api';
+import { repostPost, deletePost, getUserInfo, editPost, editQuote } from '../../utils/api';
 
 interface PostData {
   id: string | number;
@@ -35,14 +35,13 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   const [isReposting, setIsReposting] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showOptions, setShowOptions] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(post.body);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  console.log("Rendering post:", post);
-  
-  // Check if this is a repost with a parent post
+  const MAX_CHARS = 280;
   const isQuoteRepost = post.is_repost && post.parent_id !== null && post.quote;
   const isSimpleRepost = post.is_repost && post.parent_id !== null && !post.quote;
   
@@ -59,7 +58,6 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     fetchUserInfo();
   }, []);
 
-  // Determine if the current user is the author of the post
   const isCurrentUserAuthor = post.username === currentUser?.username;
 
   const toggleOptions = (e: React.MouseEvent) => {
@@ -71,14 +69,23 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    const contentToEdit = isQuoteRepost ? (post.quote || '') : post.body;
+    setEditContent(contentToEdit);
     setIsEditing(true);
     setShowOptions(false);
   };
   
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditContent(post.body);
     setError('');
+  };
+  
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    if (newContent.length <= MAX_CHARS) {
+      setEditContent(newContent);
+    }
   };
   
   const handleSaveEdit = async () => {
@@ -87,18 +94,27 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
       return;
     }
     
+    setIsSubmitting(true);
+    setError('');
+    
     try {
-      await editPost(post.id.toString(), editContent);
-      setIsEditing(false);
-      setError('');
+      // Use different API endpoints based on whether it's a quote repost or regular post
+      if (isQuoteRepost) {
+        await editQuote(post.id.toString(), editContent);
+      } else {
+        await editPost(post.id.toString(), editContent);
+      }
       
-      // Call the onEdit callback if provided
       if (onEdit) {
         onEdit(post.id.toString(), editContent);
       }
+      
+      setIsEditing(false);
     } catch (error) {
-      console.error('Error editing post:', error);
-      setError('Failed to edit post. Please try again.');
+      console.error(`Error editing ${isQuoteRepost ? 'quote' : 'post'}:`, error);
+      setError(`Failed to edit ${isQuoteRepost ? 'quote' : 'post'}. Please try again.`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -113,7 +129,6 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
       try {
         await deletePost(post.id.toString());
         
-        // Call the onDelete callback if provided
         if (onDelete) {
           onDelete(post.id.toString());
         }
@@ -148,25 +163,16 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     }
   };
   
-  // Use nickname if available, otherwise use username
   const displayName = post.nickname || post.username;
   
-  // Format date safely
   const formatDate = (dateString: string) => {
     try {
-      // First, try to clean up the date string by removing timezone information
-      // This handles formats like "2025-02-28 21:02:35.264024 -0300 -03"
       const cleanedDateString = dateString.replace(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})(\.\d+)? ([-+]\d{4}) [-+]\d{2}/, '$1');
-      
-      // Create a date object from the cleaned string
       const date = new Date(cleanedDateString);
-      
-      // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.error('Invalid date:', dateString);
         return 'some time ago';
       }
-      
       return formatDistanceToNow(date, { addSuffix: true });
     } catch (error) {
       console.error('Error formatting date:', error);
@@ -176,7 +182,6 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   
   return (
     <div className="border-b border-gray-800 p-4 hover:bg-gray-900/50 transition-colors">
-      {/* Show repost indicator for all reposts */}
       {post.is_repost && (
         <div className="flex items-center text-gray-500 text-sm mb-2">
           <Repeat size={14} className="mr-2" />
@@ -247,21 +252,60 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
               )}
             </div>
             
-            {/* Quote text for quote reposts - displayed at the top */}
-            {isQuoteRepost && (
+            {isQuoteRepost && !isEditing && (
               <div className="mt-2 mb-3">
                 <p className="whitespace-pre-wrap">{post.quote}</p>
               </div>
             )}
             
-            {/* For regular posts, show the body. For reposts, don't show the body */}
             {!isEditing && !isQuoteRepost && !isSimpleRepost && (
               <div className="mt-1">
                 <p className="whitespace-pre-wrap">{post.body}</p>
               </div>
             )}
             
-            {/* Embedded original post for all reposts */}
+            {isEditing && (
+              <div className="mt-3">
+                <textarea
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white resize-none min-h-[100px]"
+                  value={editContent}
+                  onChange={handleContentChange}
+                  maxLength={MAX_CHARS}
+                  disabled={isSubmitting}
+                  placeholder={isQuoteRepost ? "Edit your quote..." : "Edit your post..."}
+                />
+                
+                <div className="flex items-center justify-between mt-2">
+                  <div className={`text-sm ${editContent.length > MAX_CHARS * 0.8 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                    {editContent.length}/{MAX_CHARS}
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-3 py-1 rounded-full border border-gray-600 text-gray-300 hover:bg-gray-800"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      className={`px-3 py-1 rounded-full ${
+                        isSubmitting || !editContent.trim()
+                          ? 'bg-blue-800 text-gray-300 cursor-not-allowed'
+                          : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
+                      disabled={isSubmitting || !editContent.trim()}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+                
+                {error && <p className="text-red-500 mt-1 text-sm">{error}</p>}
+              </div>
+            )}
+            
             {(isQuoteRepost || isSimpleRepost) && post.parent_post && (
               <div className="mt-3 border border-gray-700 rounded-lg p-4 hover:bg-gray-800/50">
                 <div className="flex items-center">
@@ -279,36 +323,6 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
                 </div>
                 <div className="mt-2">
                   <p className="whitespace-pre-wrap text-gray-300">{post.parent_post.body}</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Edit mode */}
-            {isEditing && (
-              <div className="mt-3">
-                <textarea
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white resize-none min-h-[100px]"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  maxLength={280}
-                />
-                
-                {error && <p className="text-red-500 mt-1 text-sm">{error}</p>}
-                
-                <div className="flex justify-end mt-2 space-x-2">
-                  <button
-                    onClick={handleCancelEdit}
-                    className="px-3 py-1 rounded-full border border-gray-600 text-gray-300 hover:bg-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="px-3 py-1 rounded-full bg-blue-500 text-white hover:bg-blue-600"
-                    disabled={!editContent.trim()}
-                  >
-                    Save
-                  </button>
                 </div>
               </div>
             )}

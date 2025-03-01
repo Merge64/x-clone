@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import Layout from '../components/Layout';
-import PostList from '../components/PostList';
+import PostList from '../components/posts/PostList';
 import { getPostsByUsername, getUserInfo } from '../utils/api';
 
 function ProfilePage() {

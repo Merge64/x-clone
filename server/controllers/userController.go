@@ -220,7 +220,6 @@ func GetUserInfoHandler(db *gorm.DB) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"username":  u.Username,
-			"email":     u.Mail,
 			"createdAt": u.CreatedAt,
 		})
 	}

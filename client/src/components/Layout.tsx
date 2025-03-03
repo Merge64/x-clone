@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { X, Home, User, LogOut, Bell } from 'lucide-react';
 import { logout } from '../utils/auth';
+import { getUserInfo } from '../utils/api';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,11 +11,25 @@ interface LayoutProps {
 function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
   };
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const userInfo = await getUserInfo();
+        setCurrentUsername(userInfo.username);
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -24,7 +39,7 @@ function Layout({ children }: LayoutProps) {
           <div className="mb-8">
             <X size={30} className="text-white" />
           </div>
-          
+
           <nav className="flex-1">
             <ul className="space-y-4">
               <li>
@@ -47,8 +62,8 @@ function Layout({ children }: LayoutProps) {
               </li>
               <li>
                 <Link 
-                  to="/profile/me" 
-                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${location.pathname.startsWith('/profile') ? 'font-bold' : ''}`}
+                  to={`/${currentUsername ?? ''}`} 
+                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 `}
                 >
                   <User size={24} className="mr-4" />
                   <span className="text-xl">Profile</span>
@@ -56,7 +71,7 @@ function Layout({ children }: LayoutProps) {
               </li>
             </ul>
           </nav>
-          
+
           <button 
             onClick={handleLogout}
             className="flex items-center p-2 rounded-full hover:bg-gray-800 mt-auto"
@@ -66,7 +81,7 @@ function Layout({ children }: LayoutProps) {
           </button>
         </div>
       </div>
-      
+
       {/* Main content */}
       <div className="ml-64 flex-1">
         <main className="max-w-2xl mx-auto">

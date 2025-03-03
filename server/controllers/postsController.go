@@ -34,8 +34,8 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user details from context
-		userID, _ := getUserIDFromContext(c)
-		username, _ := getUsernameIDFromContext(c)
+		userID, _ := user.GetUserIDFromContext(c)
+		username, _ := user.GetUsernameIDFromContext(c)
 		nickname, _ := getNicknameFromContext(c)
 
 		// Parse the request body
@@ -178,15 +178,36 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		userID, _ := user.GetUserIDFromContext(c)
+
 		parentIDStr := c.Param("postid")
 		parentID, err := strconv.Atoi(parentIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post id"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post ID"})
 			return
 		}
 
+		// Check if the user already has a repost of this post
+		var existingRepost models.Post
+		errCheck := db.Where("user_id = ? AND parent_id = ? AND is_repost = ?", userID, parentID, true).First(&existingRepost).Error
+
+		if errCheck == nil {
+			// Existing repost found → Delete it
+			deleteError := deletePost(db, userID, int(existingRepost.ID))
+			c.JSON(deleteError.Status, deleteError.Message)
+			_, err = user.ToggleInteraction(db, userID, uint(parentID), "repost")
+			return
+		}
+
+		// If no existing repost, create a new one
 		repostError := createRepost(c, db, parentID)
-		c.JSON(repostError.Status, repostError.Message)
+		if repostError.Status != http.StatusCreated {
+			c.JSON(repostError.Status, repostError.Message)
+			return
+		}
+		// Increment repost count
+		_, err = user.ToggleInteraction(db, userID, uint(parentID), "repost")
+		c.JSON(http.StatusCreated, gin.H{"message": "Repost created successfully"})
 	}
 }
 
@@ -201,7 +222,7 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		toggleResult, toggleErr := user.ToggleLike(db, likerID, uint(postID))
+		toggleResult, toggleErr := user.ToggleInteraction(db, likerID, uint(postID), "")
 		if toggleErr != nil {
 			log.Println("Toggle Like error:", toggleErr)
 			if toggleResult.IsLiked {
@@ -217,32 +238,6 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 }
 
 // AUX.
-func getUserIDFromContext(c *gin.Context) (uint, error) {
-	userIDStr, exists := c.Get("userID")
-	if !exists {
-		return 0, errors.New("unauthorized")
-	}
-
-	userID, ok := userIDStr.(uint)
-	if !ok {
-		return 0, errors.New("invalid user ID")
-	}
-
-	return userID, nil
-}
-
-func getUsernameIDFromContext(c *gin.Context) (string, error) {
-	username, exists := c.Get("username")
-	if !exists {
-		return "", errors.New("unauthorized")
-	}
-	usernameStr, ok := username.(string)
-	if !ok {
-		return "", errors.New("invalid username type")
-	}
-
-	return usernameStr, nil
-}
 
 func getNicknameFromContext(c *gin.Context) (string, error) {
 	nickname, exists := c.Get("nickname")
@@ -319,7 +314,7 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 
 func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
 	userIDVal, _ := c.Get("userID")
-	username, _ := getUsernameIDFromContext(c)
+	username, _ := user.GetUsernameIDFromContext(c)
 	nickname, _ := getNicknameFromContext(c)
 
 	currentUserID, ok := userIDVal.(uint)

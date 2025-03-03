@@ -2,11 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginSignupPage from './views/LoginSignupPage';
 import LoginModal from './components/LoginModal';
 import ChangeUsername from './components/ChangeUsername';
-import HomePage from './views/HomePage';
+import HomePage from './components/HomePage';
 import AuthChecker from './utils/AuthChecker';
 import SignupModal from './components/SignupModal';
 import ProfilePage from './views/ProfilePage';
 import PostDetailPage from './views/PostDetailPage';
+import UsernamePopup from './components/UsernamePopup';
 
 function App() {
   return (
@@ -14,8 +15,8 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LoginSignupPage />}>
-        <Route path="i/flow/login" element={<LoginModal />} />
-        <Route path="i/flow/signup" element={<SignupModal />} />
+          <Route path="i/flow/login" element={<LoginModal />} />
+          <Route path="i/flow/signup" element={<SignupModal />} />
         </Route>
 
         {/* Protected routes */}
@@ -24,19 +25,31 @@ function App() {
             <HomePage />
           </AuthChecker>
         } />
-          <Route path="/c" element={
+        
+        {/* Change username route as overlay */}
+        <Route path="/change-username" element={
+          <AuthChecker>
+            <HomePage />
+            <UsernamePopup isOpen={true} />
+          </AuthChecker>
+        } />
+        
+        <Route path="/c" element={
           <AuthChecker>
             <ChangeUsername />
           </AuthChecker>
         } />
+        
+        {/* Direct username access route */}
         <Route 
-          path="/profile/:username" 
+          path="/:username" 
           element={
             <AuthChecker>
               <ProfilePage />
             </AuthChecker>
           } 
         />
+        
         <Route 
           path="/post/:username/:postId" 
           element={

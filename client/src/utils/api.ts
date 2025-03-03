@@ -45,6 +45,23 @@ export async function getUserInfo(): Promise<any> {
   }
 }
 
+export async function getUserProfile(username: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/profile/${username}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error(`Failed to fetch profile for ${username}`);
+
+    const data = await response.json();
+    return data.profile;
+  } catch (error) {
+    console.error(`Error fetching profile for ${username}:`, error);
+    throw error;
+  }
+}
+
 export async function updateUsername(username: string): Promise<any> {
   const response = await fetch('http://localhost:8080/api/user/update-username', {
     method: 'POST',
@@ -118,6 +135,45 @@ function processPost(post: any): any {
     parent_id: post.parent_id,
   };
 }
+
+export async function toggleLike(id: number): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/${id}/like`
+    , {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error('Failed to like post');
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error liking post:', error);
+    throw error;
+  }
+}
+
+export async function repost(id: number, quote?: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/${id}/repost`
+    , {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ quote }),
+    });
+
+    if (!response.ok) throw new Error('Failed to repost');
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error reposting:', error);
+    throw error;
+  }
+}
+
+
 
 export async function createPost(body: string): Promise<any> {
   try {

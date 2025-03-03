@@ -73,7 +73,7 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func isInteracted(db *gorm.DB, userID uint, postID uint, interactionType string) bool {
+func isInteracted(db *gorm.DB, userID uint, postID uint) bool {
 	var count int64
 	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
 	return count > 0
@@ -92,7 +92,7 @@ func ToggleInteraction(db *gorm.DB, userID uint, postID uint, interactionType st
 		columnName = "reposts_count"
 	}
 
-	if isInteracted(db, userID, postID, interactionType) {
+	if isInteracted(db, userID, postID) {
 		db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
 		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" - 1"))
 
@@ -214,7 +214,6 @@ func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) {
 	var posts []models.Post
 	var user models.User
-
 	db.Where("username = ?", username).First(&user)
 	result := db.Where("user_id = ?", user.ID).Find(&posts)
 	if result.Error != nil {
@@ -227,10 +226,18 @@ func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) 
 	return posts, nil
 }
 
-func CreatePost(db *gorm.DB, userID uint, nickname string, parentID *uint, username string, quote *string, body string, isRepost bool) (*models.Post, error) {
+func CreatePost(db *gorm.DB,
+	userID uint,
+	nickname string,
+	parentID *uint,
+	username string,
+	quote *string,
+	body string,
+	isRepost bool) (*models.Post, error) {
 	if !userExists(db, userID) {
 		return nil, errors.New(constants.ErrNoUser)
 	}
+
 	post := models.Post{
 		UserID:   userID,
 		Username: username,
@@ -240,6 +247,7 @@ func CreatePost(db *gorm.DB, userID uint, nickname string, parentID *uint, usern
 		Body:     body,
 		IsRepost: isRepost,
 	}
+
 	if err := db.Create(&post).Error; err != nil {
 		return nil, err
 	}
@@ -401,12 +409,6 @@ func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
 	}
 
 	return true
-}
-
-func isLiked(db *gorm.DB, userID, postID uint) bool {
-	var count int64
-	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
-	return count > 0
 }
 
 func userExists(db *gorm.DB, userID uint) bool {

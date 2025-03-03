@@ -1,34 +1,94 @@
-import { X, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { logout } from '../utils/auth';
+import { useState, useEffect } from 'react';
+import { getAllPosts } from '../utils/api';
+import Layout from '../components/Layout';
+import CreatePost from '../components/posts/CreatePost';
+import PostList from '../components/posts/PostList';
 
 function HomePage() {
-  const navigate = useNavigate();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('for-you');
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
+  const fetchPosts = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const fetchedPosts = await getAllPosts();
+      // Ensure posts is always an array
+      setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      setError('Failed to load posts. Please try again.');
+      setPosts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handlePostCreated = () => {
+    fetchPosts();
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-gray-800 p-4">
-        <div className="flex items-center justify-between">
-          <X size={30} className="text-white" />
-          <button 
-            onClick={handleLogout}
-            className="flex items-center text-gray-400 hover:text-white"
+    <Layout>
+      <div className="border-b border-gray-800">
+        <div className="flex">
+          <button
+            className={`flex-1 py-4 text-center font-bold ${
+              activeTab === 'for-you' 
+                ? 'text-white border-b-4 border-blue-500' 
+                : 'text-gray-500 hover:bg-gray-900'
+            }`}
+            onClick={() => setActiveTab('for-you')}
           >
-            <LogOut size={20} className="mr-2" />
-            <span>Logout</span>
+            For You
+          </button>
+          <button
+            className={`flex-1 py-4 text-center font-bold ${
+              activeTab === 'following' 
+                ? 'text-white border-b-4 border-blue-500' 
+                : 'text-gray-500 hover:bg-gray-900'
+            }`}
+            onClick={() => setActiveTab('following')}
+          >
+            Following
           </button>
         </div>
-      </header>
-      <main className="max-w-screen-xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Home</h1>
-        <p>Welcome to your home page! You are successfully authenticated.</p>
-      </main>
-    </div>
+      </div>
+
+      <CreatePost onPostCreated={handlePostCreated} />
+
+      {isLoading ? (
+        <div className="flex justify-center p-6">
+          <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+        </div>
+      ) : error ? (
+        <div className="p-6 text-center text-red-500">
+          <p>{error}</p>
+          <button 
+            onClick={fetchPosts}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : (
+        <PostList 
+          posts={posts} 
+          onRepost={fetchPosts}
+          emptyMessage={
+            activeTab === 'for-you' 
+              ? "No posts to display. Be the first to post something!" 
+              : "You're not following anyone yet, or they haven't posted."
+          }
+        />
+      )}
+    </Layout>
   );
 }
 

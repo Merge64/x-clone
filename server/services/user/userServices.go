@@ -80,8 +80,10 @@ func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 	var toggleResult ToggleInfo
 	var currentUser models.Like
 	if isLiked(db, userID, postID) {
-		db.Model(models.Like{}).First(&currentUser, "user_id = ? AND post_id = ?", userID, postID)
-		db.Model(models.Like{}).Delete(&currentUser)
+		db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
+
+		// Decrement like count
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count - 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       false,
@@ -89,11 +91,13 @@ func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 		}
 	} else {
 		currentUser = models.Like{
-			Model:  gorm.Model{},
 			PostID: postID,
 			UserID: userID,
 		}
-		db.Model(models.Like{}).Create(&currentUser)
+		db.Create(&currentUser)
+
+		// Increment like count
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count + 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       true,
@@ -184,7 +188,8 @@ func SearchUniqueMailUsername(db *gorm.DB, field string, value string) (bool, er
 func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 	var posts []models.Post
 
-	result := db.Table("posts").Find(&posts)
+	// Ensure ParentPost is loaded to support reposts
+	result := db.Preload("ParentPost").Order("created_at desc").Find(&posts)
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
@@ -211,18 +216,27 @@ func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) 
 	return posts, nil
 }
 
-func CreatePost(db *gorm.DB, userID uint, parentID *uint, quote *string, body string) error {
+func CreatePost(db *gorm.DB, userID uint, nickname string, parentID *uint, username string, quote *string, body string, isRepost bool) (*models.Post, error) {
 	if !userExists(db, userID) {
-		return errors.New(constants.ErrNoUser)
+		return nil, errors.New(constants.ErrNoUser)
 	}
 	post := models.Post{
 		UserID:   userID,
+		Username: username,
+		Nickname: nickname,
 		ParentID: parentID,
 		Quote:    quote,
 		Body:     body,
+		IsRepost: isRepost,
 	}
-
-	return db.Create(&post).Error
+	if err := db.Create(&post).Error; err != nil {
+		return nil, err
+	}
+	// Ensure ID is assigned after creation
+	if post.ID == 0 {
+		return nil, errors.New("failed to create post: ID not assigned")
+	}
+	return &post, nil
 }
 
 // AUX.
@@ -352,19 +366,9 @@ func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
 }
 
 func isLiked(db *gorm.DB, userID, postID uint) bool {
-	result := db.Model(models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).First(&models.Like{})
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return false
-		}
-		log.Printf("Error querying database: %v", result.Error)
-		return false
-	}
-	if result.RowsAffected == 0 {
-		return false
-	}
-
-	return true
+	var count int64
+	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
+	return count > 0
 }
 
 func userExists(db *gorm.DB, userID uint) bool {
@@ -418,30 +422,14 @@ func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content s
 	return db.Create(&message).Error
 }
 
-func ProcessPosts(rawPosts []models.Post) []PostInfo {
-	var listPosts []PostInfo
+func ProcessPosts(rawPosts []models.Post) []mappers.PostResponse {
+	processedPosts := make([]mappers.PostResponse, len(rawPosts))
 
-	for _, post := range rawPosts {
-		var currentPost struct {
-			ID        uint    `json:"id"`
-			CreatedAt string  `json:"created_at"`
-			UserID    uint    `json:"userid"` // Change to username in table
-			ParentID  *uint   `json:"parentid"`
-			Quote     *string `json:"quote"`
-			Body      string  `json:"body"`
-		}
-
-		currentPost.ID = post.ID
-		currentPost.CreatedAt = post.CreatedAt.String()
-		currentPost.UserID = post.UserID
-		currentPost.ParentID = post.ParentID
-		currentPost.Quote = post.Quote
-		currentPost.Body = post.Body
-
-		listPosts = append(listPosts, currentPost)
+	for i, post := range rawPosts {
+		processedPosts[i] = mappers.ProcessPost(post)
 	}
 
-	return listPosts
+	return processedPosts
 }
 
 func EnlistUsers(arrayOfUsers []models.User) []string {
@@ -452,14 +440,4 @@ func EnlistUsers(arrayOfUsers []models.User) []string {
 	}
 
 	return usersList
-}
-
-// Add a username field when change "UserID" to "Username" in the table.
-type PostInfo struct {
-	ID        uint    `json:"id"`
-	CreatedAt string  `json:"created_at"`
-	UserID    uint    `json:"userid"` // Change to username in table
-	ParentID  *uint   `json:"parentid"`
-	Quote     *string `json:"quote"`
-	Body      string  `json:"body"`
 }

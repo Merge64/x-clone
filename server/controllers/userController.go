@@ -204,6 +204,73 @@ func getConversation(db *gorm.DB, currentUserID uint, conversations []models.Con
 		Find(&conversations).Error
 }
 
+func GetUserInfoHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			return
+		}
+
+		var u models.User
+		if err := db.First(&u, userID).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"username":  u.Username,
+			"createdAt": u.CreatedAt,
+		})
+	}
+}
+
+func UpdateUsernameHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			return
+		}
+
+		var request struct {
+			Username string `json:"username" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+			return
+		}
+
+		var u models.User
+		if err := db.First(&u, userID).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		if u.Username == request.Username {
+			c.JSON(http.StatusOK, gin.H{"message": "Username unchanged"})
+			return
+		}
+
+		var existingUser models.User
+		if err := db.Where("username = ?", request.Username).First(&existingUser).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
+			return
+		}
+
+		u.Username = request.Username
+		if err := db.Save(&u).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update username"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":  "Username updated successfully",
+			"username": u.Username,
+		})
+	}
+}
+
 type ErrorMessage struct {
 	Message gin.H
 	Status  int

@@ -152,6 +152,18 @@ var ExpireTokenEndpoint = models.Endpoint{
 	HandlerFunction: LogoutHandler,
 }
 
+var GetUserInfoEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            "/user/info",
+	HandlerFunction: GetUserInfoHandler,
+}
+
+var UpdateUsernameEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            "/user/update-username",
+	HandlerFunction: UpdateUsernameHandler,
+}
+
 var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
@@ -179,4 +191,6 @@ var PrivateEndpoints = []models.Endpoint{
 	GetConversationMessagesEndpoint,
 	UserLogoutEndpoint,
 	CreateRepostEndpoint,
+	GetUserInfoEndpoint,
+	UpdateUsernameEndpoint,
 }

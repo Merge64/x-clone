@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
+	"main/mappers"
 	"main/models"
 	"main/services/user"
 	"net/http"
@@ -26,28 +27,57 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		listPosts := user.ProcessPosts(rawPosts)
-		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
+		c.JSON(http.StatusOK, listPosts) // <- Directly return the array
 	}
 }
 
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Get user details from context
 		userID, _ := getUserIDFromContext(c)
-		var req models.Post
+		username, _ := getUsernameIDFromContext(c)
+		nickname, _ := getNicknameFromContext(c)
 
+		// Parse the request body
+		var req struct {
+			Body     string  `json:"body"`
+			Quote    *string `json:"quote"`
+			ParentID *uint   `json:"parent_id"`
+		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
 			return
 		}
 
+		// Validate the post body
 		if err := validatePostBody(req.Body); err != nil {
 			sendErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		var quote *string // its empty when created
-		var parentID *uint
-		if err := user.CreatePost(db, userID, parentID, quote, req.Body); err != nil {
+		// Check if this is a repost (has a ParentID)
+		var parentPost *models.Post
+		if req.ParentID != nil {
+			// Fetch the parent post
+			if err := db.First(&parentPost, *req.ParentID).Error; err != nil {
+				sendErrorResponse(c, http.StatusNotFound, "Parent post not found")
+				return
+			}
+
+			// If the parent post itself is a repost, fetch the original post
+			if parentPost.ParentID != nil {
+				var originalPost models.Post
+				if err := db.First(&originalPost, *parentPost.ParentID).Error; err != nil {
+					sendErrorResponse(c, http.StatusNotFound, "Original post not found")
+					return
+				}
+				parentPost = &originalPost
+			}
+		}
+
+		// Create the post
+		createdPost, err := user.CreatePost(db, userID, nickname, req.ParentID, username, req.Quote, req.Body, req.ParentID != nil)
+		if err != nil {
 			if err.Error() == constants.ErrNoUser {
 				sendErrorResponse(c, http.StatusBadRequest, constants.ErrNoUser)
 				return
@@ -56,7 +86,21 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"message": "Post created successfully"})
+		// Fetch the post with the parent post preloaded
+		var postWithParent models.Post
+		if errDB := db.Preload("ParentPost").First(&postWithParent, createdPost.ID).Error; errDB != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch post details")
+			return
+		}
+
+		// Process the post to include the nested parent_post in the response
+		processedPost := mappers.ProcessPost(postWithParent)
+
+		// Return the response
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Post created successfully",
+			"post":    processedPost,
+		})
 	}
 }
 
@@ -105,16 +149,8 @@ func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
 func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postID, atoiErr := strconv.Atoi(c.Param("postid"))
-		userID, _ := c.Get("userID")
-		currentUserID, _ := userID.(uint)
-
 		if atoiErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
-			return
-		}
-
-		if !user.IsPostOwner(db, currentUserID, uint(postID)) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
 			return
 		}
 
@@ -195,6 +231,32 @@ func getUserIDFromContext(c *gin.Context) (uint, error) {
 	return userID, nil
 }
 
+func getUsernameIDFromContext(c *gin.Context) (string, error) {
+	username, exists := c.Get("username")
+	if !exists {
+		return "", errors.New("unauthorized")
+	}
+	usernameStr, ok := username.(string)
+	if !ok {
+		return "", errors.New("invalid username type")
+	}
+
+	return usernameStr, nil
+}
+
+func getNicknameFromContext(c *gin.Context) (string, error) {
+	nickname, exists := c.Get("nickname")
+	if !exists {
+		return "", errors.New("unauthorized")
+	}
+	nicknameStr, ok := nickname.(string)
+	if !ok {
+		return "", errors.New("invalid nickname type")
+	}
+
+	return nicknameStr, nil
+}
+
 func validatePostBody(body string) error {
 	if body == constants.Empty {
 		return errors.New("body cannot be empty")
@@ -211,14 +273,12 @@ func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 	var req models.Post
 
+	// Parse the request body
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return PostError{Message: gin.H{"error": "Invalid JSON: " + err.Error()}, Status: http.StatusBadRequest}
 	}
 
-	if err := validatePostBody(req.Body); err != nil {
-		return PostError{Message: gin.H{"error": err.Error()}, Status: http.StatusBadRequest}
-	}
-
+	// Fetch the post to edit
 	post, getPostErr := user.GetPostByID(db, uint(postID))
 	if getPostErr != nil {
 		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
@@ -231,30 +291,47 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 		}
 	}
 
-	if post.ParentID != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot edit the body of a repost"})
-		return PostError{Message: gin.H{"error": "Cannot edit the body of a repost"}, Status: http.StatusForbidden}
+	// Ensure the current user is the owner of the post
+	userID, _ := c.Get("userID")
+	currentUserID, _ := userID.(uint)
+	if post.UserID != currentUserID {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not the owner of this post"})
+		return PostError{Message: gin.H{"error": "You are not the owner of this post"}, Status: http.StatusUnauthorized}
 	}
 
-	post.Body = req.Body
+	// Allow editing of either the body, the quote, or both
+	if req.Body != "" {
+		post.Body = req.Body
+	}
+
+	if req.Quote != nil {
+		post.Quote = req.Quote
+	}
+
+	// Save the updated post to the database
 	if db.Save(&post).Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
 		return PostError{Message: gin.H{"error": "Failed to update post"}, Status: http.StatusInternalServerError}
 	}
+
 	return PostError{Message: gin.H{"message": "Post updated successfully"}, Status: http.StatusOK}
 }
 
 func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
 	userIDVal, _ := c.Get("userID")
+	username, _ := getUsernameIDFromContext(c)
+	nickname, _ := getNicknameFromContext(c)
+
 	currentUserID, ok := userIDVal.(uint)
 	if !ok {
 		return PostError{Message: gin.H{"error": "Invalid user ID type"}, Status: http.StatusInternalServerError}
 	}
 
-	var req struct {
+	var payload struct {
 		Quote string `json:"quote"`
 	}
-	if errJSON := c.ShouldBindJSON(&req); errJSON != nil {
+
+	if errJSON := c.ShouldBindJSON(&payload); errJSON != nil {
 		return PostError{Message: gin.H{"error": "Invalid JSON payload"}, Status: http.StatusBadRequest}
 	}
 
@@ -271,22 +348,32 @@ func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
 		parentPost = originalPost
 	}
 
-	rawRepost := models.Post{
+	r := models.Post{
 		UserID:   currentUserID,
 		ParentID: &parentPost.ID,
-		Body:     parentPost.Body,
-	}
-	if req.Quote != constants.Empty {
-		rawRepost.Quote = &req.Quote
+		Username: username,
+		Body:     "",
+		Quote:    &payload.Quote,
+		Nickname: nickname,
+		IsRepost: true,
 	}
 
-	if errDB := db.Create(&rawRepost).Error; errDB != nil {
+	// Create the post
+	createdPost, errDB := user.CreatePost(db, r.UserID, r.Nickname, r.ParentID, r.Username, r.Quote, r.Body, r.IsRepost)
+	if errDB != nil {
 		return PostError{Message: gin.H{"error": "Failed to create repost"}, Status: http.StatusInternalServerError}
 	}
 
-	repost := user.ProcessPosts([]models.Post{rawRepost})
+	// Fetch the post with ParentPost preloaded
+	var postWithParent models.Post
+	if err := db.Preload("ParentPost").First(&postWithParent, createdPost.ID).Error; err != nil {
+		return PostError{Message: gin.H{"error": "Failed to fetch repost"}, Status: http.StatusInternalServerError}
+	}
 
-	return PostError{Message: gin.H{"message": "Repost created successfully", "post": repost}, Status: http.StatusCreated}
+	// Process the post to include parent_post in the response
+	processedPost := mappers.ProcessPost(postWithParent)
+
+	return PostError{Message: gin.H{"message": "Repost created successfully", "post": processedPost}, Status: http.StatusCreated}
 }
 
 func deletePost(db *gorm.DB, currentUserID uint, postID int) PostError {

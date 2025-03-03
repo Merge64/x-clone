@@ -133,12 +133,22 @@ export function SignupModal() {
     return true;
   };
 
-  // Generate a random username with up to 7 random numbers
-  const generateRandomUsername = (baseName: string) => {
-    const randomDigits = Math.floor(Math.random() * 10000000).toString();
-    // Get a random length between 1 and 7 for the number of digits
-    const randomLength = Math.floor(Math.random() * 7) + 1;
-    return baseName + randomDigits.substring(0, randomLength);
+  // Generate a username that fits within the 15 character limit
+  const generateUsername = (baseName: string) => {
+    // Clean the base name to only include valid characters (letters, numbers, underscores)
+    const cleanedName = baseName.replace(/[^a-zA-Z0-9_]/g, '');
+    
+    // Generate exactly 7 random digits
+    const randomDigits = Math.floor(Math.random() * 10000000).toString().padStart(7, '0');
+    
+    // Calculate how much space we have left for the base name
+    const maxBaseNameLength = 15 - randomDigits.length;
+    
+    // Trim the base name if needed to fit within the limit
+    const trimmedBaseName = cleanedName.substring(0, maxBaseNameLength);
+    
+    // Combine the trimmed base name with the random digits
+    return trimmedBaseName + randomDigits;
   };
 
   // Check if username is unique and keep trying until it is
@@ -147,7 +157,7 @@ export function SignupModal() {
     let username = '';
     
     while (!isUnique) {
-      username = generateRandomUsername(baseName);
+      username = generateUsername(baseName);
       try {
         const response = await fetch(`http://localhost:8080/api/search?q=${username}&f=unique-user`);
         const data = await response.json();

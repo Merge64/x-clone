@@ -3,6 +3,7 @@ import { getAllPosts, getSearchedPosts } from "../utils/api";
 import Layout from "../components/Layout";
 import PostList from "../components/posts/PostList";
 import { Search } from "lucide-react";
+import { UserList } from "../components/user/UserList";
 
 function ExplorePage() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -10,24 +11,9 @@ function ExplorePage() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("for-you");
   const [keyword, setKeyword] = useState("");
+  const [order, setOrder] = useState("");
 
   const fetchPosts = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const fetchedPosts = await getAllPosts();
-      // Ensure posts is always an array
-      setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
-    } catch (error) {
-      console.error("Error fetching posts:", error);
-      setError("Failed to load posts. Please try again.");
-      setPosts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchSearchedPosts = async () => {
     setIsLoading(true);
     setError("");
 
@@ -35,9 +21,9 @@ function ExplorePage() {
       let fetchedPosts = null;
 
       if (keyword == "") {
-        fetchedPosts = await getAllPosts(); // Buscar todos si está vacío
+        fetchedPosts = await getAllPosts();
       } else {
-        fetchedPosts = await getSearchedPosts(keyword); // Buscar literal
+        fetchedPosts = await getSearchedPosts(keyword, order);
       }
 
       setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
@@ -52,15 +38,23 @@ function ExplorePage() {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
-
-  useEffect(() => {
-    fetchSearchedPosts();
-  }, []);
+  }, [order, keyword]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchSearchedPosts();
+    fetchPosts();
+  };
+
+  const handleMostLiked = () => {
+    setOrder("");
+  };
+
+  const handleLatest = () => {
+    setOrder("latest");
+  };
+
+  const handleUser = () => {
+    setOrder("user");
   };
 
   return (
@@ -96,36 +90,29 @@ function ExplorePage() {
           >
             For You
           </button>
-          <button
-            className={`flex-1 py-4 text-center font-bold ${
-              activeTab === "following"
-                ? "text-white border-b-4 border-blue-500"
-                : "text-gray-500 hover:bg-gray-900"
-            }`}
-            onClick={() => setActiveTab("following")}
-          >
-            Following
-          </button>
         </div>
       </div>
 
       {/* Search Filters (Optional) */}
       <div className="px-4 py-2 bg-black border-b border-gray-800">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          <button className="px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700">
+        <div className="flex justify-center gap-2 overflow-x-auto py-2 scrollbar-hide">
+          <button
+            className="mx-1.5 px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700"
+            onClick={handleMostLiked}
+          >
             Top
           </button>
-          <button className="px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700">
+          <button
+            className="mx-1.5 px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700"
+            onClick={handleLatest}
+          >
             Latest
           </button>
-          <button className="px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700">
+          <button
+            className="mx-1.5 px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700"
+            onClick={handleUser}
+          >
             People
-          </button>
-          <button className="px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700">
-            Media
-          </button>
-          <button className="px-4 py-1 bg-gray-800 rounded-full text-sm font-medium text-white hover:bg-gray-700">
-            Lists
           </button>
         </div>
       </div>
@@ -138,16 +125,28 @@ function ExplorePage() {
         <div className="p-6 text-center text-red-500">
           <p>{error}</p>
           <button
-            onClick={fetchSearchedPosts}
+            onClick={fetchPosts}
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
           >
             Try Again
           </button>
         </div>
+      ) : order === "user" ? (
+        keyword === "" ? ( // Nueva condición para campo vacío
+          <div className="p-6 text-center text-gray-500">
+            <p>Enter something to search</p>
+          </div>
+        ) : (
+          <UserList
+            users={posts}
+            emptyMessage="No users found."
+            className="space-y-4 p-4"
+          />
+        )
       ) : (
         <PostList
           posts={posts}
-          onRepost={fetchSearchedPosts}
+          onRepost={fetchPosts}
           emptyMessage={
             activeTab === "for-you"
               ? "No posts to display. Be the first to post something!"
@@ -155,58 +154,6 @@ function ExplorePage() {
           }
         />
       )}
-
-      {/* Right Sidebar (Optional) */}
-      <div className="hidden lg:block fixed right-0 top-0 h-screen w-80 border-l border-gray-800 p-4 bg-black overflow-y-auto">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold mb-4">Search filters</h2>
-          <div className="bg-gray-900 rounded-xl p-4">
-            <h3 className="font-bold mb-2">People</h3>
-            <div className="flex items-center justify-between mb-2">
-              <span>From anyone</span>
-              <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>People you follow</span>
-              <div className="h-5 w-5 rounded-full border border-gray-600"></div>
-            </div>
-
-            <h3 className="font-bold mt-4 mb-2">Location</h3>
-            <div className="flex items-center justify-between mb-2">
-              <span>Anywhere</span>
-              <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Near you</span>
-              <div className="h-5 w-5 rounded-full border border-gray-600"></div>
-            </div>
-
-            <button className="text-blue-500 mt-4">Advanced search</button>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-bold mb-4">What's happening</h2>
-          <div className="bg-gray-900 rounded-xl p-4 mb-4">
-            <div className="mb-4">
-              <p className="text-xs text-gray-500">Trending in your area</p>
-              <p className="font-bold">#TrendingTopic</p>
-              <p className="text-xs text-gray-500">10.4K posts</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Technology · Trending</p>
-              <p className="font-bold">#WebDevelopment</p>
-              <p className="text-xs text-gray-500">5.2K posts</p>
-            </div>
-          </div>
-
-          <button className="text-blue-500">Show more</button>
-        </div>
-      </div>
     </Layout>
   );
 }

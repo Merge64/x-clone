@@ -95,19 +95,23 @@ export async function getAllPosts(): Promise<any[]> {
   }
 }
 
-export async function getSearchedPosts(keyword: string) {
+export async function getSearchedPosts(keyword: string, orderBy: string) {
+  let endpointURl = `http://localhost:8080/api/search?q=${keyword}`;
+  if (orderBy) {
+    endpointURl += `&f=${orderBy}`;
+  }
   try {
-    const response = await fetch(`http://localhost:8080/api/search?q=${keyword}`, {
+    const response = await fetch(endpointURl, {
       method: 'GET',
       credentials: 'include',
     });
-    if (!response.ok) throw new Error('Failed to fetch posts');
+    if (!response.ok) throw new Error('Failed to fetch data');
 
     const data = await response.json();
 
-    return ensurePostsFormat(data);
+    return orderBy === 'user' ? data.users || data : ensurePostsFormat(data);
   } catch (error) {
-    console.error('Error fetching posts:', error);
+    console.error('Error fetching data:', error);
     return [];
   }
 }
@@ -117,6 +121,39 @@ function ensurePostsFormat(data: any): any[] {
   if (Array.isArray(data)) return data.map(processPost);
   if (data && typeof data === 'object') return Object.values(data).map(processPost);
   return [];
+}
+
+export async function FollowUser(userID: string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/profile/follow/${userID}`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to follow user');
+
+    const data = await response.json();
+    return ensurePostsFormat(data);
+
+  } catch (error) {
+    console.error('Error to following user:', error);
+    return [];
+  }
+}
+
+export async function UnfollowUser(userID: string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/profile/unfollow/${userID}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to unfollow user');
+    const data = await response.json();
+    return ensurePostsFormat(data);
+
+  } catch (error) {
+    console.error('Error to unfollowing user:', error);
+    return [];
+  }
 }
 
 function processPost(post: any): any {

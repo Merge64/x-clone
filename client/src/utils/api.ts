@@ -95,6 +95,23 @@ export async function getAllPosts(): Promise<any[]> {
   }
 }
 
+export async function getSearchedPosts(keyword: string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/search?q=${keyword}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch posts');
+
+    const data = await response.json();
+
+    return ensurePostsFormat(data);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    return [];
+  }
+}
+
 function ensurePostsFormat(data: any): any[] {
   if (data && data.posts && Array.isArray(data.posts)) return data.posts.map(processPost);
   if (Array.isArray(data)) return data.map(processPost);

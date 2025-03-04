@@ -10,6 +10,7 @@ import (
 	"main/mappers"
 	"main/models"
 	"regexp"
+	"strings"
 )
 
 func CreateAccount(db *gorm.DB, nickname, username, password, mail string, location *string) error {
@@ -220,13 +221,15 @@ func CreatePost(db *gorm.DB, userID uint, nickname string, parentID *uint, usern
 	if !userExists(db, userID) {
 		return nil, errors.New(constants.ErrNoUser)
 	}
+
+	processedBody := strings.TrimLeft(body, " ")
 	post := models.Post{
 		UserID:   userID,
 		Username: username,
 		Nickname: nickname,
 		ParentID: parentID,
 		Quote:    quote,
-		Body:     body,
+		Body:     processedBody,
 		IsRepost: isRepost,
 	}
 	if err := db.Create(&post).Error; err != nil {

@@ -1,13 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginSignupPage from './views/LoginSignupPage';
-import LoginModal from './components/LoginModal';
-import ChangeUsername from './components/ChangeUsername';
-import HomePage from './components/HomePage';
-import AuthChecker from './utils/AuthChecker';
-import SignupModal from './components/SignupModal';
+import LoginModal from './components/auth/LoginModal';
+import HomePage from './components/feed/HomePage';
+import AuthChecker from './components/auth/AuthChecker';
+import SignupModal from './components/auth/SignupModal';
 import ProfilePage from './views/ProfilePage';
+import UsernamePopup from './components/feed/UsernamePopup';
 import PostDetailPage from './views/PostDetailPage';
-import UsernamePopup from './components/UsernamePopup';
 
 function App() {
   return (
@@ -34,12 +33,6 @@ function App() {
           </AuthChecker>
         } />
         
-        <Route path="/c" element={
-          <AuthChecker>
-            <ChangeUsername />
-          </AuthChecker>
-        } />
-        
         {/* Direct username access route */}
         <Route 
           path="/:username" 
@@ -51,11 +44,9 @@ function App() {
         />
         
         <Route 
-          path="/post/:username/:postId" 
+          path="/:username/:postId" 
           element={
-            <AuthChecker>
               <PostDetailPage />
-            </AuthChecker>
           } 
         />
 

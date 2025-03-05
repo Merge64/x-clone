@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 export function SignupModal() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +17,7 @@ export function SignupModal() {
   const [birthDateError, setBirthDateError] = useState('');
   const [isBirthDateValid, setIsBirthDateValid] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -177,11 +179,15 @@ export function SignupModal() {
 
   const handleSubmit = async () => {
     if (!validateEmail(email) || !validatePassword(password) || !validateBirthDate()) return;
-
+    
+    setIsSubmitting(true);
+    setErrorMessage('');
+    
     try {
       // Generate a unique username
       const uniqueUsername = await getUniqueUsername(name);
       
+      // Sign up
       const signupResponse = await fetch("http://localhost:8080/api/i/flow/signup", {
         method: "POST",
         headers: {
@@ -200,10 +206,52 @@ export function SignupModal() {
         const errorData = await signupResponse.json();
         throw new Error(errorData.error || "Signup failed");
       }
-
-      navigate("/i/flow/login");
-    } catch (error) {
+      
+      // Get the token from the response
+      const signupData = await signupResponse.json();
+      if (signupData.token) {
+        // Store the token in localStorage
+        localStorage.setItem('Authentication', signupData.token);
+        
+        // Navigate to home and then to change-username
+        navigate("/home");
+        setTimeout(() => {
+          navigate("/change-username");
+        }, 200);
+      } else {
+        // If no token in response, try to login
+        const loginResponse = await fetch("http://localhost:8080/api/i/flow/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: uniqueUsername,
+            password: password
+          }),
+          credentials: "include",
+        });
+        
+        if (!loginResponse.ok) {
+          throw new Error("Failed to authenticate after signup");
+        }
+        
+        const loginData = await loginResponse.json();
+        if (loginData.token) {
+          localStorage.setItem('Authentication', loginData.token);
+        }
+        
+        navigate("/home");
+        setTimeout(() => {
+          navigate("/settings/change-username");
+        }, 100);
+      }
+    } catch (error: any) {
       console.error("Signup failed:", error);
+      setErrorMessage(error.message || "Signup failed. Please try again.");
+      setShowErrorAlert(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -227,6 +275,12 @@ export function SignupModal() {
         </div>
         <div className="px-24">
           <h1 className="text-4xl font-bold text-white text-left mb-8">Create your account</h1>
+
+          {showErrorAlert && errorMessage && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-500 text-red-200 rounded-md">
+              {errorMessage}
+            </div>
+          )}
 
           <div>
             <div className="relative mb-4">
@@ -323,10 +377,20 @@ export function SignupModal() {
 
           <button
             onClick={handleSubmit}
-            disabled={!!emailError || !validateEmail(email) || !password || !isBirthDateValid}
-            className={`w-full bg-white text-black font-semibold rounded-full py-2.5 px-4 mb-6 transition-colors ${!!emailError || !validateEmail(email) || !password || !isBirthDateValid ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-200"}`}
+            disabled={isSubmitting || !!emailError || !validateEmail(email) || !password || !isBirthDateValid}
+            className={`w-full bg-white text-black font-semibold rounded-full py-2.5 px-4 mb-6 transition-colors flex items-center justify-center ${isSubmitting || !!emailError || !validateEmail(email) || !password || !isBirthDateValid ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-200"}`}
           >
-            Sign up
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating account...
+              </>
+            ) : (
+              'Sign up'
+            )}
           </button>
         </div>
       </div>

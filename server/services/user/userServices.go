@@ -73,46 +73,78 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func isInteracted(db *gorm.DB, userID uint, postID uint) bool {
+// Like-specific functions
+func IsLiked(db *gorm.DB, userID uint, postID uint) bool {
 	var count int64
 	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
 	return count > 0
 }
 
-func ToggleInteraction(db *gorm.DB, userID uint, postID uint, interactionType string) (ToggleInfo, error) {
+func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 	if !userExists(db, userID) {
 		return ToggleInfo{}, errors.New(constants.ErrNoUser)
 	}
 
 	var toggleResult ToggleInfo
-	var currentInteraction models.Like
 
-	columnName := "likes_count"
-	if interactionType == "repost" {
-		columnName = "reposts_count"
-	}
-
-	if isInteracted(db, userID, postID) {
+	if IsLiked(db, userID, postID) {
 		db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
-		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" - 1"))
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count - 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       false,
-			MessageStatus: "decreased count successfully",
+			MessageStatus: "unliked successfully",
 		}
 	} else {
-		currentInteraction = models.Like{
-			PostID: postID,
-			UserID: userID,
-		}
-		db.Create(&currentInteraction)
-
-		// Increment count
-		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" + 1"))
+		newLike := models.Like{PostID: postID, UserID: userID}
+		db.Create(&newLike)
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count + 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       true,
-			MessageStatus: "increased count successfully",
+			MessageStatus: "liked successfully",
+		}
+	}
+
+	return toggleResult, nil
+}
+
+// IsReposted Repost-specific functions
+func IsReposted(db *gorm.DB, userID uint, postID uint) bool {
+	var count int64
+	db.Model(&models.Post{}).Where("user_id = ? AND parent_id = ?", userID, postID).Count(&count)
+	return count > 0
+}
+
+func ToggleRepost(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
+	if !userExists(db, userID) {
+		return ToggleInfo{}, errors.New(constants.ErrNoUser)
+	}
+
+	var toggleResult ToggleInfo
+
+	if IsReposted(db, userID, postID) {
+		// Delete the repost
+		db.Where("user_id = ? AND parent_id = ? AND is_repost = ?", userID, postID, true).Delete(&models.Post{})
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("reposts_count", gorm.Expr("reposts_count - 1"))
+
+		toggleResult = ToggleInfo{
+			IsReposted:    false,
+			MessageStatus: "unreposted successfully",
+		}
+	} else {
+		// Create a new repost
+		repost := models.Post{
+			UserID:   userID,
+			ParentID: &postID,
+			IsRepost: true,
+		}
+		db.Create(&repost)
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("reposts_count", gorm.Expr("reposts_count + 1"))
+
+		toggleResult = ToggleInfo{
+			IsReposted:    true,
+			MessageStatus: "reposted successfully",
 		}
 	}
 
@@ -262,6 +294,7 @@ func CreatePost(db *gorm.DB,
 
 type ToggleInfo struct {
 	IsLiked       bool
+	IsReposted    bool
 	MessageStatus string
 }
 
@@ -362,6 +395,19 @@ func GetUsernameIDFromContext(c *gin.Context) (string, error) {
 	}
 
 	return usernameStr, nil
+}
+
+func GetNicknameFromContext(c *gin.Context) (string, error) {
+	nickname, exists := c.Get("nickname")
+	if !exists {
+		return "", errors.New("unauthorized")
+	}
+	nicknameStr, ok := nickname.(string)
+	if !ok {
+		return "", errors.New("invalid nickname type")
+	}
+
+	return nicknameStr, nil
 }
 
 func GetUserIDFromContext(c *gin.Context) (uint, error) {
@@ -470,6 +516,34 @@ func ProcessPosts(rawPosts []models.Post) []mappers.PostResponse {
 	}
 
 	return processedPosts
+}
+
+func ProcessPost(post models.Post) mappers.PostResponse {
+	var parentPost *mappers.ParentPostResponse
+	if post.ParentPost != nil {
+		parentPost = &mappers.ParentPostResponse{
+			ID:        post.ParentPost.ID,
+			CreatedAt: post.ParentPost.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+			Username:  post.ParentPost.Username,
+			Nickname:  post.ParentPost.Nickname,
+			Body:      post.ParentPost.Body,
+		}
+	}
+
+	return mappers.PostResponse{
+		ID:           post.ID,
+		CreatedAt:    post.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+		UserID:       post.UserID,
+		Nickname:     post.Nickname,
+		Username:     post.Username,
+		ParentID:     post.ParentID,
+		Quote:        post.Quote,
+		Body:         post.Body,
+		RepostsCount: post.RepostsCount,
+		LikesCount:   post.LikesCount,
+		IsRepost:     post.IsRepost,
+		ParentPost:   parentPost,
+	}
 }
 
 func EnlistUsers(arrayOfUsers []models.User) []string {

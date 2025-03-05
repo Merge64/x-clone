@@ -258,9 +258,32 @@ func UpdateUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Start a transaction
+		tx := db.Begin()
+		if tx.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+			return
+		}
+
+		// Update the username in the user table
 		u.Username = request.Username
-		if err := db.Save(&u).Error; err != nil {
+		if err := tx.Save(&u).Error; err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update username"})
+			return
+		}
+
+		// Update the username in all posts by this user
+		if err := tx.Model(&models.Post{}).Where("user_id = ?", userID).Update("username", request.Username).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update posts with new username"})
+			return
+		}
+
+		// Commit the transaction
+		if err := tx.Commit().Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 			return
 		}
 

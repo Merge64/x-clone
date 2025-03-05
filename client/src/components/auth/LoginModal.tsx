@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { checkExists, login, validateToken } from "../utils/auth";
+import { checkExists, login, validateToken } from "../../utils/auth";
 
 function FloatingLabelInput({
   label,

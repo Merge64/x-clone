@@ -1,5 +1,4 @@
-import React from 'react';
-import ChangeUsername from './ChangeUsername';
+import ChangeUsername from '../auth/ChangeUsername';
 import { useNavigate } from 'react-router-dom';
 
 interface UsernamePopupProps {

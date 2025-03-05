@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
-import { getUserInfo, updateUsername } from '../utils/api';
-import { checkExists } from '../utils/auth';
+import { getUserInfo, updateUsername } from '../../utils/api';
+import { checkExists } from '../../utils/auth';
 import { useNavigate } from 'react-router-dom';
 
 interface ChangeUsernameProps {

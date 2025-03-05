@@ -59,12 +59,46 @@ func SignUpHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if user.CreateAccount(db, req.Nickname, req.Username, string(hashedPassword), req.Mail, locationAux) != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid parameters to create an account"})
+		// Create the user account
+		newUser := models.User{
+			Nickname: req.Nickname,
+			Username: req.Username,
+			Password: string(hashedPassword),
+			Mail:     req.Mail,
+			Location: locationAux,
+		}
+
+		if err := db.Create(&newUser).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create account"})
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"message": "Account created successfully"})
+		// Generate JWT token
+		secretKey := os.Getenv("SECRET")
+		if secretKey == constants.Empty {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Server configuration error"})
+			return
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": newUser.ID,
+			"exp": time.Now().Add(time.Hour * constants.ExpDate).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte(secretKey))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+			return
+		}
+
+		c.SetSameSite(http.SameSiteLaxMode)
+		c.SetCookie("Authorization", tokenString, constants.MaxCookieAge, "/", constants.Empty, false, true)
+
+		// Return the token in the JSON response
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Account created successfully",
+			"token":   tokenString,
+		})
 	}
 }
 

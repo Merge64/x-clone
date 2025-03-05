@@ -142,13 +142,13 @@ var UnfollowUserEndpoint = models.Endpoint{
 
 var ValidateTokenEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLAuth + "validate",
+	Path:            constants.InitialURLAuth + "/validate",
 	HandlerFunction: authentication.ValidateHandler,
 }
 
 var ExpireTokenEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLAuth + "logout",
+	Path:            constants.InitialURLAuth + "/logout",
 	HandlerFunction: LogoutHandler,
 }
 
@@ -164,6 +164,30 @@ var UpdateUsernameEndpoint = models.Endpoint{
 	HandlerFunction: UpdateUsernameHandler,
 }
 
+var CheckIfReposted = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/check/:postid/reposted",
+	HandlerFunction: CheckRepostedHandler,
+}
+
+var CheckIfLiked = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/check/:postid/liked",
+	HandlerFunction: CheckIfLikedHandler,
+}
+
+var GetCommentsEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/comments/:postid",
+	HandlerFunction: GetCommentsHandler,
+}
+
+var CreateCommentEndpoint = models.Endpoint{
+	Method:          models.POST,
+	Path:            constants.InitialURLPosts + "/comments/:postid",
+	HandlerFunction: CreateCommentHandler,
+}
+
 var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
@@ -174,6 +198,7 @@ var PublicEndpoints = []models.Endpoint{
 	GetAllPostsEndpoint,
 	ValidateTokenEndpoint,
 	ExpireTokenEndpoint,
+	GetCommentsEndpoint,
 }
 
 var PrivateEndpoints = []models.Endpoint{
@@ -193,4 +218,7 @@ var PrivateEndpoints = []models.Endpoint{
 	CreateRepostEndpoint,
 	GetUserInfoEndpoint,
 	UpdateUsernameEndpoint,
+	CheckIfReposted,
+	CheckIfLiked,
+	CreateCommentEndpoint,
 }

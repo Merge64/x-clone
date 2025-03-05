@@ -3,7 +3,7 @@ package constants
 const Empty = ""
 const EmailRegexPatterns = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 
-const InitialURLAuth = "/auth/"
+const InitialURLAuth = "/auth"
 const InitialURLi = "/i/flow"
 const InitialURLPosts = "/posts"
 const InitialURLProfile = "/profile"

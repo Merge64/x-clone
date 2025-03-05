@@ -1,3 +1,5 @@
+import { PostData } from "../types/post";
+
 export function getToken(): string | null {
   return localStorage.getItem('Authentication');
 }
@@ -78,6 +80,96 @@ export async function updateUsername(username: string): Promise<any> {
   return await response.json();
 }
 
+export async function checkIfLiked(postId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/check/${postId}/liked`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.liked || false;
+  } catch (error) {
+    console.error('Error checking if post is liked:', error);
+    return false;
+  }
+}
+
+export async function checkIfReposted(postId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/check/${postId}/reposted`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.reposted || false;
+  } catch (error) {
+    console.error('Error checking if post is reposted:', error);
+    return false;
+  }
+}
+
+export async function getComments(postId: number): Promise<any[]> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/comments/${postId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch comments');
+    const data = await response.json();
+    return Array.isArray(data.comments) ? data.comments.map(processComment) : [];
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    return [
+
+    ];
+  }
+}
+
+function processComment(comment: any): any {
+  if (!comment) return null;
+  return {
+    ...comment,
+    id: comment.id,
+    created_at: comment.created_at,
+    userid: comment.userid,
+    username: comment.username || 'unknown',
+    nickname: comment.nickname || comment.username || 'unknown',
+    body: comment.body || '',
+    likes_count: comment.likes_count || 0,
+    reposts_count: comment.reposts_count || 0,
+    comments_count: comment.comments_count || 0,
+    in_reply_to_username: comment.in_reply_to_username || comment.parent_username,
+    in_reply_to_post_id: comment.in_reply_to_post_id || comment.parent_id
+  };
+}
+
+export async function addComment(parentId: number, body: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/comments/${parentId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ body }),
+    });
+
+    if (!response.ok) throw new Error('Failed to add comment');
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    return {
+      success: true,
+      comment: {
+        body: body
+      }
+    };
+  }
+}
+
 export async function checkUsernameAvailability(username: string): Promise<boolean> {
   try {
     const response = await fetch(`http://localhost:8080/api/search?q=${encodeURIComponent(username)}&f=unique-user`, {
@@ -131,6 +223,8 @@ function processPost(post: any): any {
     body: post.body || '',
     is_repost: !!post.is_repost,
     likes_count: post.likes_count || 0,
+    reposts_count: post.reposts_count || 0,
+    comments_count: post.comments_count || 0,
     parentid: post.parent_id,
     parent_id: post.parent_id,
   };
@@ -138,8 +232,7 @@ function processPost(post: any): any {
 
 export async function toggleLike(id: number): Promise<any> {
   try {
-    const response = await fetch(`http://localhost:8080/api/posts/${id}/like`
-    , {
+    const response = await fetch(`http://localhost:8080/api/posts/${id}/like`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -156,24 +249,38 @@ export async function toggleLike(id: number): Promise<any> {
 
 export async function repost(id: number, quote?: string): Promise<any> {
   try {
-    const response = await fetch(`http://localhost:8080/api/posts/${id}/repost`
-    , {
+    // Get current user info first
+    const userInfo = await getUserInfo();
+    
+    const response = await fetch(`http://localhost:8080/api/posts/${id}/repost`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
       credentials: 'include',
-      body: JSON.stringify({ quote }),
+      body: JSON.stringify({ 
+        quote,
+        username: userInfo.username,
+        nickname: userInfo.nickname
+      }),
     });
 
     if (!response.ok) throw new Error('Failed to repost');
     
-    return response.json();
+    const data = await response.json();
+    
+    // Ensure the response includes user information
+    return {
+      ...data,
+      username: userInfo.username,
+      nickname: userInfo.nickname
+    };
   } catch (error) {
     console.error('Error reposting:', error);
     throw error;
   }
 }
-
-
 
 export async function createPost(body: string): Promise<any> {
   try {
@@ -193,53 +300,51 @@ export async function createPost(body: string): Promise<any> {
   }
 }
 
-export async function getPostsByUsername(username: string): Promise<any[]> {
+export async function getPostsByUsername(username: string): Promise<any> {
   try {
-    const response = await fetch(`http://localhost:8080/api/posts/${username}`, {
+    const response = await fetch(`'http://localhost:8080/api/posts/${username}'`, {
       method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
 
-    if (!response.ok) throw new Error(`Failed to fetch posts for user ${username}`);
+    if (!response.ok) throw new Error('Failed to create post');
 
-    const data = await response.json();
-    return ensurePostsFormat(data);
+    return await response.json();
   } catch (error) {
-    console.error(`Error fetching posts for user ${username}:`, error);
-    return [];
-  }
-}
-
-export async function getPostById(username: string, postId: string): Promise<any> {
-  try {
-    const response = await fetch(`http://localhost:8080/api/posts/${username}/${postId}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      const fallbackResponse = await fetch(`http://localhost:8080/api/posts/post/${postId}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!fallbackResponse.ok) throw new Error(`Failed to fetch post ${postId}`);
-
-      return processPost(await fallbackResponse.json());
-    }
-
-    return processPost(await response.json());
-  } catch (error) {
-    console.error(`Error fetching post ${postId}:`, error);
-    try {
-      const allPosts = await getAllPosts();
-      return allPosts.find(p => p.id.toString() === postId.toString()) || null;
-    } catch (fallbackError) {
-      console.error('Fallback error:', fallbackError);
-    }
+    console.error('Error creating post:', error);
     throw error;
   }
 }
+
+export const getPostById = async (username: string, postId: string): Promise<PostData | null> => {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/${username}/${postId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch post');
+    }
+    const data = await response.json();
+    const postData = data.post;
+
+    return {
+      id: postData.id,
+      created_at: postData.created_at,
+      username: postData.username,
+      nickname: postData.nickname || '',
+      body: postData.body || postData.quote || '',
+      likes_count: postData.likes_count,
+      reposts_count: postData.reposts_count,
+      comments_count: postData.comments_count || 0,
+      is_repost: postData.is_repost || false,
+      parent_id: postData.parent_id,
+      quote: postData.quote,
+      parent_post: postData.parent_post,
+    };
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    return null;
+  }
+};
 
 export async function editPost(postId: string, body: string): Promise<any> {
   try {
@@ -293,14 +398,32 @@ export async function deletePost(postId: string): Promise<void> {
 
 export async function repostPost(postId: string): Promise<any> {
   try {
+    // Get current user info first
+    const userInfo = await getUserInfo();
+    
     const response = await fetch(`http://localhost:8080/api/posts/${postId}/repost`, {
       method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
       credentials: 'include',
+      body: JSON.stringify({ 
+        username: userInfo.username,
+        nickname: userInfo.nickname
+      }),
     });
 
     if (!response.ok) throw new Error('Failed to repost');
-
-    return await response.json();
+    
+    const data = await response.json();
+    
+    // Ensure the response includes user information
+    return {
+      ...data,
+      username: userInfo.username,
+      nickname: userInfo.nickname
+    };
   } catch (error) {
     console.error('Error reposting:', error);
     throw error;
@@ -309,16 +432,33 @@ export async function repostPost(postId: string): Promise<any> {
 
 export async function quoteRepost(postId: string, quote: string): Promise<any> {
   try {
+    // Get current user info first
+    const userInfo = await getUserInfo();
+    
     const response = await fetch(`http://localhost:8080/api/posts/${postId}/quote`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
       credentials: 'include',
-      body: JSON.stringify({ quote }),
+      body: JSON.stringify({ 
+        quote,
+        username: userInfo.username,
+        nickname: userInfo.nickname
+      }),
     });
 
     if (!response.ok) throw new Error('Failed to quote repost');
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Ensure the response includes user information
+    return {
+      ...data,
+      username: userInfo.username,
+      nickname: userInfo.nickname
+    };
   } catch (error) {
     console.error('Error quote reposting:', error);
     throw error;

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getAllPosts } from '../utils/api';
-import Layout from './Layout';
-import CreatePost from './posts/CreatePost';
-import PostList from './posts/PostList';
+import { getAllPosts } from '../../utils/api';
+import Layout from '../../views/Layout';
+import CreatePost from '../posts/CreatePost';
+import PostList from '../posts/PostList';
 import UsernamePopup from './UsernamePopup';
 
 function HomePage() {
@@ -36,9 +36,6 @@ function HomePage() {
     fetchPosts();
   };
 
-  const openUsernamePopup = () => {
-    setIsUsernamePopupOpen(true);
-  };
 
   const closeUsernamePopup = () => {
     setIsUsernamePopupOpen(false);

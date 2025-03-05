@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Search } from 'lucide-react';
+import { ArrowLeft, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
-import Layout from '../components/Layout';
+import Layout from './Layout';
 import PostList from '../components/posts/PostList';
 import { getPostsByUsername, getUserInfo, getUserProfile } from '../utils/api';
 

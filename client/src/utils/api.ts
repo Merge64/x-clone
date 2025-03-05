@@ -156,6 +156,25 @@ export async function UnfollowUser(userID: string) {
   }
 }
 
+
+export async function IsAlreadyFollowing(userID: string): Promise<boolean> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/profile/is-following/${userID}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    return data.isFollowing === true;
+
+  } catch (error) {
+    console.error('Error checking follow status:', error);
+    return false;
+  }
+}
+
 function processPost(post: any): any {
   if (!post) return null;
   return {

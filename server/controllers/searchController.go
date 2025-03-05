@@ -13,10 +13,6 @@ import (
 func SearchHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		keyword := c.Query("q")
-		if keyword == constants.Empty {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'q' query parameter"})
-			return
-		}
 
 		keyword = strings.TrimSpace(keyword)
 		keywords := strings.Fields(keyword)

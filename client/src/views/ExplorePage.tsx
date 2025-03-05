@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllPosts, getSearchedPosts } from "../utils/api";
+import { getSearchedPosts } from "../utils/api";
 import Layout from "../components/Layout";
 import PostList from "../components/posts/PostList";
 import { Search } from "lucide-react";
@@ -20,11 +20,7 @@ function ExplorePage() {
     try {
       let fetchedPosts = null;
 
-      if (keyword == "") {
-        fetchedPosts = await getAllPosts();
-      } else {
-        fetchedPosts = await getSearchedPosts(keyword, order);
-      }
+      fetchedPosts = await getSearchedPosts(keyword, order);
 
       setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
     } catch (error) {

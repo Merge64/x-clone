@@ -6,6 +6,7 @@ import (
 	"main/models"
 	"main/services/user"
 	"net/http"
+	"strconv"
 )
 
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
@@ -82,5 +83,21 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		listFollowing := user.EnlistUsers(following)
 
 		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": listFollowing})
+	}
+}
+
+func IsAlreadyFollowingHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		followedID, _ := strconv.Atoi(c.Param("userid"))
+		userID, _ := c.Get("userID")
+		currentUserID, _ := userID.(uint)
+
+		isFollowing, isFollowingErr := user.IsFollowing(db, uint(followedID), currentUserID)
+		if isFollowingErr != nil {
+			c.JSON(http.StatusOK, gin.H{"message": "Check Following successfully", "isFollowing": isFollowing})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Check Following successfully", "isFollowing": isFollowing})
 	}
 }

@@ -1,9 +1,22 @@
-import { useState } from "react";
-import { FollowUser, UnfollowUser } from "../utils/api";
+import { useEffect, useState } from "react";
+import { FollowUser, IsAlreadyFollowing, UnfollowUser } from "../utils/api";
 import { UserInfo } from "./user/UserLayout";
 
 export function FollowCard(user: UserInfo) {
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState<boolean | null>(null); // Estado inicial indefinido
+
+  useEffect(() => {
+    async function checkFollowingStatus() {
+      const stateIsFollowing = await IsAlreadyFollowing(String(user.id));
+      setIsFollowing(stateIsFollowing);
+    }
+
+    checkFollowingStatus();
+  }, [user.id]);
+
+  if (isFollowing === null) {
+    return <p>Loading...</p>;
+  }
 
   const selectedAction = isFollowing ? UnfollowUser : FollowUser;
   const selectedText = isFollowing ? "Unfollow" : "Follow";

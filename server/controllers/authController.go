@@ -75,7 +75,8 @@ func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if errHashPassword := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)); errHashPassword != nil {
+		if errHashPassword := bcrypt.CompareHashAndPassword([]byte(u.Password),
+			[]byte(req.Password)); errHashPassword != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credentials"})
 			return
 		}

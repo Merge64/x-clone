@@ -42,7 +42,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          config-path: .golangci.yml
+          config: .golangci.yml
           working-directory: server
           version: v1.62.2  # Match version from your config
           args: --timeout=5m

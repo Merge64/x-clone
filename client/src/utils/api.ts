@@ -112,6 +112,57 @@ export async function checkIfReposted(postId: number): Promise<boolean> {
   }
 }
 
+export async function getRepostsCount(postId: number): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/count/${postId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.reposts_count
+  } catch (error) {
+    console.error('Error checking count of reposts:', error);
+    return;
+  }
+}
+
+export async function getLikesCount(postId: number): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/count/${postId}/likes`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.likes_count
+  } catch (error) {
+    console.error('Error checking count of reposts:', error);
+    return;
+  }
+}
+
+
+export async function getCommentsCount(postId: number): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/count/${postId}/comments`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.comments_count
+  } catch (error) {
+    console.error('Error checking count of reposts:', error);
+    return;
+  }
+}
+
+
+
 export async function getComments(postId: number): Promise<any[]> {
   try {
     const response = await fetch(`http://localhost:8080/api/posts/comments/${postId}`, {

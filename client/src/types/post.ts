@@ -1,5 +1,5 @@
 export interface PostData {
-    id: number;
+    id: number | string;
     created_at: string;
     userid?: string | number;
     username: string;

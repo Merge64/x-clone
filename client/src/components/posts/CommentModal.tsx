@@ -36,15 +36,28 @@ const CommentModal: React.FC<CommentModalProps> = ({
     if (!newComment.trim() || isAddingComment) return;
 
     setIsAddingComment(true);
-    try {
-      await addComment(Number(post.id), newComment);
-      setNewComment('');
-      onCommentAdded();
-      onClose(); // Close the modal after successful comment
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    } finally {
-      setIsAddingComment(false);
+    if (post.is_repost && (post.quote == null || post.quote == undefined || post.quote == "")) {
+      try {
+        await addComment(Number(post.parent_id), newComment);
+        setNewComment('');
+        onCommentAdded();
+        onClose(); // Close the modal after successful comment
+      } catch (error) {
+        console.error('Error adding comment:', error);
+      } finally {
+        setIsAddingComment(false);
+      }
+    } else{
+      try {
+        await addComment(Number(post.id), newComment);
+        setNewComment('');
+        onCommentAdded();
+        onClose(); // Close the modal after successful comment
+      } catch (error) {
+        console.error('Error adding comment:', error);
+      } finally {
+        setIsAddingComment(false);
+      }
     }
   };
 

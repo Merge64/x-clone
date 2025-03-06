@@ -274,7 +274,10 @@ func UpdateUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		// Update the username in all posts by this user
-		if err := tx.Model(&models.Post{}).Where("user_id = ?", userID).Update("username", request.Username).Error; err != nil {
+		if err := tx.
+			Model(&models.Post{}).
+			Where("user_id = ?", userID).
+			Update("username", request.Username).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update posts with new username"})
 			return

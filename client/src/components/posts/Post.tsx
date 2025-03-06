@@ -11,6 +11,9 @@ import {
   editQuote,
   checkIfLiked,
   checkIfReposted,
+  getRepostsCount,
+  getCommentsCount,
+  getLikesCount,
 } from '../../utils/api';
 import PostOptions from './PostOptions';
 import PostContent from './PostContent';
@@ -36,7 +39,7 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [likesCount, setLikesCount] = useState(post.likes_count);
-  const [repostsCount, setRepostsCount] = useState(post.reposts_count);
+  const [repostsCount, setRepostsCount] = useState(Number);
   const [showRepostOptions, setShowRepostOptions] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -44,6 +47,7 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
   const [isUndoingRepost, setIsUndoingRepost] = useState(false);
+  const [isLikeProcessing, setIsLikeProcessing] = useState(false);
 
   const MAX_CHARS = 280;
   const isQuoteRepost = Boolean(post.is_repost && post.parent_id !== null && post.quote);
@@ -63,29 +67,106 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   }, []);
 
   useEffect(() => {
-    setLikesCount(post.likes_count);
-    setRepostsCount(post.reposts_count);
-    setCommentsCount(post.comments_count || 0);
-  }, [post.likes_count, post.reposts_count, post.comments_count]);
+    const fetchLikesCount = async () => {
+
+      if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
+        try {
+          const count = await getLikesCount(Number(post.parent_post?.id));
+          setLikesCount(count);
+        } catch (error) {
+          console.error('Error fetching likes count:', error);
+        }
+      } else {
+        try {
+          const count = await getLikesCount(Number(post.id));
+          setLikesCount(count);
+        } catch (error) {
+          console.error('Error fetching likes count:', error);
+        }
+      }
+    };
+
+    fetchLikesCount();
+  }, [post.is_repost, post.parent_id, post.id]);
+
+  useEffect(() => {
+    const fetchRepostsCount = async () => {
+
+      if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
+        try {
+          const count = await getRepostsCount(Number(post.parent_post?.id));
+          setRepostsCount(count);
+        } catch (error) {
+          console.error('Error fetching reposts count:', error);
+        }
+      } else {
+        try {
+          const count = await getRepostsCount(Number(post.id));
+          setRepostsCount(count);
+        } catch (error) {
+          console.error('Error fetching reposts count:', error);
+        }
+      }
+    };
+
+    fetchRepostsCount();
+  }, [post.is_repost, post.parent_id, post.id]);
+
+  useEffect(() => {
+    const fetchCommentsCount = async () => {
+
+      if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
+        try {
+          const count = await getCommentsCount(Number(post.parent_post?.id));
+          setCommentsCount(count);
+        } catch (error) {
+          console.error('Error fetching comments count:', error);
+        }
+      } else {
+        try {
+          const count = await getCommentsCount(Number(post.id));
+          setCommentsCount(count);
+        } catch (error) {
+          console.error('Error fetching comments count:', error);
+        }
+      }
+    };
+
+    fetchCommentsCount();
+  }, [post.is_repost, post.parent_id, post.id]);
 
   useEffect(() => {
     const checkInteractions = async () => {
-      try {
-        const [likedStatus, repostedStatus] = await Promise.all([
-          checkIfLiked(Number(post.id)),
-          checkIfReposted(Number(post.id))
-        ]);
-        setIsLiked(likedStatus);
-        setIsReposted(repostedStatus);
-      } catch (error) {
-        console.error('Error checking post interactions:', error);
+
+      if (post.is_repost && (post.quote == null || post.quote == undefined || post.quote == "")) {
+        try {
+          const [likedStatus, repostedStatus] = await Promise.all([
+            checkIfLiked(Number(post.parent_id)),
+            checkIfReposted(Number(post.parent_id))
+          ]);
+          setIsLiked(likedStatus);
+          setIsReposted(repostedStatus);
+        } catch (error) {
+          console.error('Error checking post interactions:', error);
+        }
+      } else {
+        try {
+          const [likedStatus, repostedStatus] = await Promise.all([
+            checkIfLiked(Number(post.id)),
+            checkIfReposted(Number(post.id))
+          ]);
+          setIsLiked(likedStatus);
+          setIsReposted(repostedStatus);
+        } catch (error) {
+          console.error('Error checking post interactions:', error);
+        }
       }
     };
 
     if (currentUser) {
       checkInteractions();
     }
-  }, [post.id, currentUser]);
+  }, [post.id, post.is_repost, post.parent_id, currentUser]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -201,28 +282,51 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount(prevCount => newLikedState ? prevCount + 1 : prevCount - 1);
+    if (isLikeProcessing) return;
+
+    setIsLikeProcessing(true);
+    const previousLikeState = isLiked;
+    const previousCount = likesCount;
 
     try {
-      await toggleLike(Number(post.id));
+      setIsLiked(!previousLikeState);
+      setLikesCount(prevCount => previousLikeState ? prevCount - 1 : prevCount + 1);
 
-      if (onRepost) {
-        onRepost();
+      if (post.is_repost && (post.quote == null || post.quote == undefined || post.quote == "")) {
+        await toggleLike(Number(post.parent_id));
+      } else {
+        await toggleLike(Number(post.id));
+
       }
+
+      if (post.is_repost && (post.quote == null || post.quote == undefined || post.quote == "")) {
+
+        const currentLikeStatus = await checkIfLiked(Number(post.parent_id));
+        const currentLikesCount = await getLikesCount(Number(post.parent_id));
+        setIsLiked(currentLikeStatus);
+        setLikesCount(currentLikesCount);
+
+      } else {
+        // Verify the current state after the API call
+        const currentLikeStatus = await checkIfLiked(Number(post.id));
+        const currentLikesCount = await getLikesCount(Number(post.id));
+        setIsLiked(currentLikeStatus);
+        setLikesCount(currentLikesCount);
+      }
+
     } catch (error) {
       console.error('Error toggling like:', error);
-      setIsLiked(!newLikedState);
-      setLikesCount(post.likes_count);
+      // Revert to previous state on error
+      setIsLiked(previousLikeState);
+      setLikesCount(previousCount);
+    } finally {
+      setIsLikeProcessing(false);
     }
   };
 
   const toggleRepostOptions = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Toggle repost options regardless of current state
     setShowRepostOptions(!showRepostOptions);
   };
 
@@ -236,22 +340,42 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     setIsReposted(true);
     setRepostsCount(prevCount => prevCount + 1);
 
-    try {
-      await repost(Number(post.id), "");
 
-      if (onRepost) {
-        onRepost();
+    if (post.is_repost) {
+
+      try {
+        await repost(Number(post.parent_id), "");
+
+        if (onRepost) {
+          onRepost();
+        }
+
+        setShowRepostOptions(false);
+      } catch (error) {
+        console.error('Error reposting:', error);
+        setIsReposted(false);
+      } finally {
+        setIsReposting(false);
       }
+    } else {
+      try {
+        const data = await repost(Number(post.id), "");
+        console.log(data.nickname)
+        if (onRepost) {
+          onRepost();
+        }
 
-      setShowRepostOptions(false);
-    } catch (error) {
-      console.error('Error reposting:', error);
-      setIsReposted(false);
-      setRepostsCount(post.reposts_count);
-    } finally {
-      setIsReposting(false);
-    }
-  };
+        setShowRepostOptions(false);
+      } catch (error) {
+        console.error('Error reposting:', error);
+        setIsReposted(false);
+      } finally {
+        setIsReposting(false);
+      }
+    };
+  }
+
+
 
   const handleUndoRepost = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -263,22 +387,40 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     setIsReposted(false);
     setRepostsCount(prevCount => Math.max(0, prevCount - 1));
 
-    try {
-      await repost(Number(post.id));
+    if (post.is_repost) {
+      try {
+        await repost(Number(post.parent_id));
+        if (onRepost) {
+          onRepost();
+        }
 
-      if (onRepost) {
-        onRepost();
+        closeQuoteModal();
+      } catch (error) {
+        console.error('Error quote reposting:', error);
+        setIsReposted(false);
+        setRepostsCount(post.reposts_count);
+      } finally {
+        setIsReposting(false);
       }
-      
-      setShowRepostOptions(false);
-    } catch (error) {
-      console.error('Error undoing repost:', error);
-      setIsReposted(true);
-      setRepostsCount(post.reposts_count);
-    } finally {
-      setIsUndoingRepost(false);
-    }
-  };
+    } else {
+      try {
+        await repost(Number(post.id));
+
+        if (onRepost) {
+          onRepost();
+        }
+
+        closeQuoteModal();
+      } catch (error) {
+        console.error('Error quote reposting:', error);
+        setIsReposted(false);
+        setRepostsCount(post.reposts_count);
+      } finally {
+        setIsReposting(false);
+      }
+    };
+  }
+
 
   const openQuoteModal = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -298,22 +440,42 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     setIsReposted(true);
     setRepostsCount(prevCount => prevCount + 1);
 
-    try {
-      await repost(Number(post.id), quoteText);
+    if (post.is_repost) {
+      try {
+        await repost(Number(post.parent_id), quoteText);
+        if (onRepost) {
+          onRepost();
+        }
 
-      if (onRepost) {
-        onRepost();
+        closeQuoteModal();
+      } catch (error) {
+        console.error('Error quote reposting:', error);
+        setIsReposted(false);
+        setRepostsCount(post.reposts_count);
+      } finally {
+        setIsReposting(false);
       }
+    } else {
+      try {
+        await repost(Number(post.id), quoteText);
+        if (onRepost) {
+          onRepost();
+        }
 
-      closeQuoteModal();
-    } catch (error) {
-      console.error('Error quote reposting:', error);
-      setIsReposted(false);
-      setRepostsCount(post.reposts_count);
-    } finally {
-      setIsReposting(false);
-    }
-  };
+        closeQuoteModal();
+      } catch (error) {
+        console.error('Error quote reposting:', error);
+        setIsReposted(false);
+        setRepostsCount(post.reposts_count);
+      } finally {
+        setIsReposting(false);
+      }
+    };
+  }
+
+
+
+
 
   const openCommentModal = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -353,7 +515,6 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
     }
   };
 
-  // Determine what to show for the repost button
   const renderRepostButton = () => {
     return (
       <button
@@ -372,29 +533,51 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   };
 
   return (
-    <div className="border-b border-gray-800 p-4 hover:bg-gray-900/50 transition-colors">
+    <div className="block cursor-pointer" onClick={handlePostClick}>
+      <div className="border-b border-gray-800 p-4 hover:bg-gray-900/50 transition-colors">
         {post.is_repost && (
           <div className="flex items-center text-gray-500 text-sm mb-2">
             <Repeat size={14} className="mr-2" />
-            <span>{displayName} reposted</span>
+            <span>
+              
+              <a
+                href={`/${post.parent_post?.username}`}
+                className="hover:underline"
+              >
+                {post.parent_post?.username}
+              </a>
+              {" "}reposted
+            </span>
           </div>
         )}
-
-      <div className="block" onClick={handlePostClick}>
+        {!post.is_repost && post.parent_id !== null && post.parent_id !== undefined && (
+          <div className="flex items-center text-gray-500 text-sm mb-2">
+            <MessageSquare size={14} className="mr-2" />
+            <span>
+              replying to{" "}
+              <a
+                href={`/${post.parent_post?.username}`}
+                className="hover:underline"
+              >
+                {post.parent_post?.username}
+              </a>
+            </span>
+          </div>
+        )}
         <div className="flex space-x-3">
           <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-lg font-bold">
-            {displayName.charAt(0).toUpperCase()}
+            {post.nickname?.charAt(0).toUpperCase()}
           </div>
-          
+
           <div className="flex-1">
             <div className="flex items-center">
-              <div className="flex-1">
+              <div className="flex-1 cursor-pointer">
                 <Link
                   to={`/${post.username}`}
                   className="font-bold hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {displayName}
+                  {post.nickname}
                 </Link>
                 <span className="text-gray-500 ml-1">@{post.username}</span>
                 <span className="text-gray-500 ml-2">·</span>
@@ -489,6 +672,7 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
                 <button
                   className={`flex items-center ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
                   onClick={handleLikeToggle}
+                  disabled={isLikeProcessing}
                 >
                   <Heart
                     size={18}

@@ -13,25 +13,6 @@ import (
 	"regexp"
 )
 
-func CreateAccount(db *gorm.DB, nickname, username, password, mail string, location *string) error {
-	if password == constants.Empty || username == constants.Empty {
-		return errors.New("fields must not be empty")
-	}
-
-	var currentUser = models.User{
-		Model:    gorm.Model{},
-		Nickname: nickname,
-		Username: username,
-		Mail:     mail,
-		Location: location,
-		Password: password,
-	}
-
-	db.Model(models.User{}).Create(&currentUser)
-
-	return nil
-}
-
 func FollowAccount(db *gorm.DB, followingID, followedUserID uint) error {
 	// 1. Check if the user is already following
 	var existing models.Follow
@@ -73,7 +54,7 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-// Like-specific functions
+// IsLiked Like-specific functions.
 func IsLiked(db *gorm.DB, userID uint, postID uint) bool {
 	var count int64
 	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
@@ -103,48 +84,6 @@ func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 		toggleResult = ToggleInfo{
 			IsLiked:       true,
 			MessageStatus: "liked successfully",
-		}
-	}
-
-	return toggleResult, nil
-}
-
-// IsReposted Repost-specific functions
-func IsReposted(db *gorm.DB, userID uint, postID uint) bool {
-	var count int64
-	db.Model(&models.Post{}).Where("user_id = ? AND parent_id = ?", userID, postID).Count(&count)
-	return count > 0
-}
-
-func ToggleRepost(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
-	if !userExists(db, userID) {
-		return ToggleInfo{}, errors.New(constants.ErrNoUser)
-	}
-
-	var toggleResult ToggleInfo
-
-	if IsReposted(db, userID, postID) {
-		// Delete the repost
-		db.Where("user_id = ? AND parent_id = ? AND is_repost = ?", userID, postID, true).Delete(&models.Post{})
-		db.Model(&models.Post{}).Where("id = ?", postID).Update("reposts_count", gorm.Expr("reposts_count - 1"))
-
-		toggleResult = ToggleInfo{
-			IsReposted:    false,
-			MessageStatus: "unreposted successfully",
-		}
-	} else {
-		// Create a new repost
-		repost := models.Post{
-			UserID:   userID,
-			ParentID: &postID,
-			IsRepost: true,
-		}
-		db.Create(&repost)
-		db.Model(&models.Post{}).Where("id = ?", postID).Update("reposts_count", gorm.Expr("reposts_count + 1"))
-
-		toggleResult = ToggleInfo{
-			IsReposted:    true,
-			MessageStatus: "reposted successfully",
 		}
 	}
 
@@ -520,7 +459,7 @@ func ProcessPosts(rawPosts []models.Post) []mappers.PostResponse {
 
 func ProcessPost(post models.Post) mappers.PostResponse {
 	var parentPost *mappers.ParentPostResponse
-	if post.ParentPost != nil {
+	if post.ParentPost != nil && post.IsRepost {
 		parentPost = &mappers.ParentPostResponse{
 			ID:        post.ParentPost.ID,
 			CreatedAt: post.ParentPost.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),

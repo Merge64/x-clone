@@ -188,6 +188,22 @@ var CreateCommentEndpoint = models.Endpoint{
 	HandlerFunction: CreateCommentHandler,
 }
 
+var CountRepostsEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/count/:postid",
+	HandlerFunction: CountRepostsHandler,
+}
+var CountLikesEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/count/:postid/likes",
+	HandlerFunction: CountLikesHandler,
+}
+var CountCommentsEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/count/:postid/comments",
+	HandlerFunction: CountCommentsHandler,
+}
+
 var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
@@ -199,6 +215,9 @@ var PublicEndpoints = []models.Endpoint{
 	ValidateTokenEndpoint,
 	ExpireTokenEndpoint,
 	GetCommentsEndpoint,
+	CountRepostsEndpoint,
+	CountLikesEndpoint,
+	CountCommentsEndpoint,
 }
 
 var PrivateEndpoints = []models.Endpoint{

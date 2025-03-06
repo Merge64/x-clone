@@ -100,8 +100,8 @@ const CommentModal: React.FC<CommentModalProps> = ({
 
               <div className="mt-3 text-gray-500">
                 <span>Replying to </span>
-                <span className="text-blue-400 hover:underline">
-                  @{post.username}
+                <span className="text-[#1D9BF0] hover:underline">
+                <a href={`/${post.username}`}>@{post.username}</a>
                 </span>
               </div>
             </div>

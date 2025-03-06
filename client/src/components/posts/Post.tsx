@@ -533,8 +533,8 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
   };
 
   return (
-    <div className="block cursor-pointer" onClick={handlePostClick}>
-      <div className="border-b border-gray-800 p-4 hover:bg-gray-900/50 transition-colors">
+    <div className="block cursor-pointer">
+      <div className="border-b border-gray-800 p-4 hover:bg-gray-900/50 transition-colors" onClick={handlePostClick}>
         {post.is_repost && (
           <div className="flex items-center text-gray-500 text-sm mb-2">
             <Repeat size={14} className="mr-2" />
@@ -551,7 +551,7 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
           </div>
         )}
         {!post.is_repost && post.parent_id !== null && post.parent_id !== undefined && (
-          <div className="flex items-center text-gray-500 text-sm mb-2">
+          <div className="flex items-center text-gray-500 text-sm mb-2" onClick={handlePostClick}>
             <MessageSquare size={14} className="mr-2" />
             <span>
               replying to{" "}
@@ -559,7 +559,7 @@ function Post({ post, onRepost, onEdit, onDelete }: PostProps) {
                 href={`/${post.parent_post?.username}`}
                 className="hover:underline"
               >
-                {post.parent_post?.username}
+                {post.parent_post?.username }
               </a>
             </span>
           </div>

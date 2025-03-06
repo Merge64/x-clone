@@ -87,6 +87,8 @@ function PostDetailPage() {
                 try {
                     const count = await getLikesCount(Number(post.id));
                     setLikesCount(count);
+                    console.log(post.parent_post)
+
                 } catch (error) {
                     console.error('Error fetching likes count:', error);
                 }
@@ -146,8 +148,14 @@ function PostDetailPage() {
             
             setLoadingComments(true);
             try {
-                const fetchedComments = await getComments(Number(post.id));
-                setComments(fetchedComments);
+                // If it's a simple repost (no quote), fetch comments for the parent post
+                if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
+                    const fetchedComments = await getComments(Number(post.parent_post?.id));
+                    setComments(fetchedComments);
+                } else {
+                    const fetchedComments = await getComments(Number(post.id));
+                    setComments(fetchedComments);
+                }
             } catch (error) {
                 console.error('Error fetching comments:', error);
             } finally {
@@ -156,7 +164,7 @@ function PostDetailPage() {
         };
     
         fetchComments();
-    }, [post.id]);
+    }, [post.id, post.is_repost, post.parent_post?.id]);
 
     useEffect(() => {
         const checkInteractions = async () => {
@@ -207,8 +215,14 @@ function PostDetailPage() {
         setCommentsCount(prev => prev + 1);
         
         if (post.id) {
-            const fetchedComments = await getComments(Number(post.id));
-            setComments(fetchedComments);
+            // If it's a simple repost (no quote), fetch comments for the parent post
+            if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
+                const fetchedComments = await getComments(Number(post.parent_post?.id));
+                setComments(fetchedComments);
+            } else {
+                const fetchedComments = await getComments(Number(post.id));
+                setComments(fetchedComments);
+            }
         }
     };
 
@@ -555,7 +569,8 @@ function PostDetailPage() {
                     <h1 className="text-xl font-bold">Post</h1>
                 </header>
 
-                {post.parent_post && post.is_repost === false && (
+                {/* Show parent post for comments */}
+                {post.parent_post && !post.is_repost && (
                     <div className="border-b border-gray-800">
                         <Post
                             post={post.parent_post}

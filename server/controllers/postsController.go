@@ -317,13 +317,20 @@ func GetCommentsHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		var comments []models.Post
-		result := db.Where("parent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
+		// Preload ParentPost to include it in the processing
+		result := db.Preload("ParentPost").Where("parent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"comments": comments})
+		// Process each comment using ProcessPost
+		processedComments := make([]mappers.PostResponse, len(comments))
+		for i, comment := range comments {
+			processedComments[i] = user.ProcessPost(comment) // Use user.ProcessPost if part of a package
+		}
+
+		c.JSON(http.StatusOK, gin.H{"comments": processedComments})
 	}
 }
 

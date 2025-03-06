@@ -86,18 +86,21 @@ const PostContent: React.FC<PostContentProps> = ({
 
   return (
     <>
+      {/* Show the quote content if it's a quote repost */}
       {isQuoteRepost && !isEditing && (
         <div className="mt-2 mb-3">
           <p className="whitespace-pre-wrap">{post.quote}</p>
         </div>
       )}
 
+      {/* Show the main post content if it's not a simple repost */}
       {!isEditing && !isQuoteRepost && !isSimpleRepost && (
         <div className="mt-1">
           <p className="whitespace-pre-wrap">{post.body}</p>
         </div>
       )}
 
+      {/* Show the referenced post for reposts and quote reposts */}
       {(isQuoteRepost || isSimpleRepost) && post.parent_post && (
         <div 
           className="mt-3 border border-gray-700 rounded-lg p-4 hover:bg-gray-800/50 cursor-pointer"

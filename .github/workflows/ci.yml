@@ -19,7 +19,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23'
+          go-version: '1.21'  # Fixed: Use supported Go version
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -32,26 +32,19 @@ jobs:
       - name: Check formatting with gofmt
         run: |
           echo "Checking code formatting with gofmt..."
-          # Only check the server folder (where your .go files live):
           unformatted=$(gofmt -l server)
           if [ -n "$unformatted" ]; then
-            echo "The following files are not formatted:"
-            echo "$unformatted"
+            echo "Unformatted files:\n$unformatted"
             exit 1
           fi
 
-      - name: Install golangci-lint
-        run: |
-          echo "Installing golangci-lint v1.53.3..."
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-            | sh -s -- -b $(go env GOPATH)/bin v1.53.3
-
+      # Remove manual installation and use action's built-in installation
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          # Use 'config-path' instead of 'config'
           config-path: .golangci.yml
           working-directory: server
+          version: v1.62.2  # Match version from your config
           args: --timeout=5m
 
       - name: Run go vet

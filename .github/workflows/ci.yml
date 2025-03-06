@@ -49,11 +49,9 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          # If .golangci.yml is at the repo root:
-          config: .golangci.yml
-          # This ensures the lint command runs in server/ (where go.mod is):
+          # Use 'config-path' instead of 'config'
+          config-path: .golangci.yml
           working-directory: server
-          # Optional argument: increase default timeout
           args: --timeout=5m
 
       - name: Run go vet

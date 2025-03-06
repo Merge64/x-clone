@@ -124,17 +124,20 @@ func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post,
 	var posts []models.Post
 	var result *gorm.DB
 
-	if keyword == constants.Empty {
+	switch {
+	case keyword == constants.Empty:
 		result = db.Order(orderBy).Find(&posts)
 		fmt.Println("posts:", posts)
-	} else if len(keyword) < constants.SearchedWordLen {
+
+	case len(keyword) < constants.SearchedWordLen:
 		queryPattern := fmt.Sprintf("\\m%s\\M", keyword)
 		q := db.Where("body ~* ?", queryPattern)
 		if orderBy != constants.Empty {
 			q = q.Order(orderBy)
 		}
 		result = q.Find(&posts)
-	} else {
+
+	default:
 		queryPattern := "%" + keyword + "%"
 		q := db.Where("body ILIKE ?", queryPattern)
 		if orderBy != constants.Empty {

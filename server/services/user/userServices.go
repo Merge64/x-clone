@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
@@ -72,36 +73,46 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
+func isInteracted(db *gorm.DB, userID uint, postID uint) bool {
+	var count int64
+	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
+	return count > 0
+}
+
+func ToggleInteraction(db *gorm.DB, userID uint, postID uint, interactionType string) (ToggleInfo, error) {
 	if !userExists(db, userID) {
 		return ToggleInfo{}, errors.New(constants.ErrNoUser)
 	}
 
 	var toggleResult ToggleInfo
-	var currentUser models.Like
-	if isLiked(db, userID, postID) {
-		db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
+	var currentInteraction models.Like
 
-		// Decrement like count
-		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count - 1"))
+	columnName := "likes_count"
+	if interactionType == "repost" {
+		columnName = "reposts_count"
+	}
+
+	if isInteracted(db, userID, postID) {
+		db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
+		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" - 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       false,
-			MessageStatus: "unliked post successfully",
+			MessageStatus: "decreased count successfully",
 		}
 	} else {
-		currentUser = models.Like{
+		currentInteraction = models.Like{
 			PostID: postID,
 			UserID: userID,
 		}
-		db.Create(&currentUser)
+		db.Create(&currentInteraction)
 
-		// Increment like count
-		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count + 1"))
+		// Increment count
+		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" + 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       true,
-			MessageStatus: "liked post successfully",
+			MessageStatus: "increased count successfully",
 		}
 	}
 
@@ -113,14 +124,20 @@ func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post,
 	var posts []models.Post
 	var result *gorm.DB
 
-	if len(keyword) < constants.SearchedWordLen {
+	switch {
+	case keyword == constants.Empty:
+		result = db.Order(orderBy).Find(&posts)
+		fmt.Println("posts:", posts)
+
+	case len(keyword) < constants.SearchedWordLen:
 		queryPattern := fmt.Sprintf("\\m%s\\M", keyword)
 		q := db.Where("body ~* ?", queryPattern)
 		if orderBy != constants.Empty {
 			q = q.Order(orderBy)
 		}
 		result = q.Find(&posts)
-	} else {
+
+	default:
 		queryPattern := "%" + keyword + "%"
 		q := db.Where("body ILIKE ?", queryPattern)
 		if orderBy != constants.Empty {
@@ -203,7 +220,6 @@ func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) {
 	var posts []models.Post
 	var user models.User
-
 	db.Where("username = ?", username).First(&user)
 	result := db.Where("user_id = ?", user.ID).Find(&posts)
 	if result.Error != nil {
@@ -216,10 +232,18 @@ func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) 
 	return posts, nil
 }
 
-func CreatePost(db *gorm.DB, userID uint, nickname string, parentID *uint, username string, quote *string, body string, isRepost bool) (*models.Post, error) {
+func CreatePost(db *gorm.DB,
+	userID uint,
+	nickname string,
+	parentID *uint,
+	username string,
+	quote *string,
+	body string,
+	isRepost bool) (*models.Post, error) {
 	if !userExists(db, userID) {
 		return nil, errors.New(constants.ErrNoUser)
 	}
+
 	post := models.Post{
 		UserID:   userID,
 		Username: username,
@@ -229,6 +253,7 @@ func CreatePost(db *gorm.DB, userID uint, nickname string, parentID *uint, usern
 		Body:     body,
 		IsRepost: isRepost,
 	}
+
 	if err := db.Create(&post).Error; err != nil {
 		return nil, err
 	}
@@ -332,6 +357,33 @@ func GetFollowers(db *gorm.DB, username string) ([]models.User, error) {
 	return followers, nil
 }
 
+func GetUsernameIDFromContext(c *gin.Context) (string, error) {
+	username, exists := c.Get("username")
+	if !exists {
+		return "", errors.New("unauthorized")
+	}
+	usernameStr, ok := username.(string)
+	if !ok {
+		return "", errors.New("invalid username type")
+	}
+
+	return usernameStr, nil
+}
+
+func GetUserIDFromContext(c *gin.Context) (uint, error) {
+	userIDStr, exists := c.Get("userID")
+	if !exists {
+		return 0, errors.New("unauthorized")
+	}
+
+	userID, ok := userIDStr.(uint)
+	if !ok {
+		return 0, errors.New("invalid user ID")
+	}
+
+	return userID, nil
+}
+
 func GetFollowing(db *gorm.DB, username string) ([]models.User, error) {
 	var following []models.User
 	currentUser, getUserErr := GetUserByUsername(db, username)
@@ -363,12 +415,6 @@ func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
 	}
 
 	return true
-}
-
-func isLiked(db *gorm.DB, userID, postID uint) bool {
-	var count int64
-	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
-	return count > 0
 }
 
 func userExists(db *gorm.DB, userID uint) bool {
@@ -440,4 +486,15 @@ func EnlistUsers(arrayOfUsers []models.User) []string {
 	}
 
 	return usersList
+}
+
+func IsFollowing(db *gorm.DB, followedID uint, currentUserID uint) (bool, error) {
+	var follow models.Follow
+	db.Where("following_user_id = ? AND followed_user_id = ?", currentUserID, followedID).First(&follow)
+
+	if follow.ID == 0 {
+		return false, errors.New("not following user")
+	}
+
+	return true, nil
 }

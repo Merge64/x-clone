@@ -140,6 +140,12 @@ var UnfollowUserEndpoint = models.Endpoint{
 	HandlerFunction: UnfollowUserHandler,
 }
 
+var IsAlreadyFollowingEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLProfile + "/is-following/:userid",
+	HandlerFunction: IsAlreadyFollowingHandler,
+}
+
 var ValidateTokenEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLAuth + "validate",
@@ -179,6 +185,7 @@ var PublicEndpoints = []models.Endpoint{
 var PrivateEndpoints = []models.Endpoint{
 	FollowUserEndpoint,
 	UnfollowUserEndpoint,
+	IsAlreadyFollowingEndpoint,
 	GetFollowersProfileEndpoint,
 	GetFollowingProfileEndpoint,
 	EditUserProfileEndpoint,

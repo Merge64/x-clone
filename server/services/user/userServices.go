@@ -13,25 +13,6 @@ import (
 	"regexp"
 )
 
-func CreateAccount(db *gorm.DB, nickname, username, password, mail string, location *string) error {
-	if password == constants.Empty || username == constants.Empty {
-		return errors.New("fields must not be empty")
-	}
-
-	var currentUser = models.User{
-		Model:    gorm.Model{},
-		Nickname: nickname,
-		Username: username,
-		Mail:     mail,
-		Location: location,
-		Password: password,
-	}
-
-	db.Model(models.User{}).Create(&currentUser)
-
-	return nil
-}
-
 func FollowAccount(db *gorm.DB, followingID, followedUserID uint) error {
 	// 1. Check if the user is already following
 	var existing models.Follow
@@ -73,46 +54,36 @@ func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
 	return nil
 }
 
-func isInteracted(db *gorm.DB, userID uint, postID uint) bool {
+// IsLiked Like-specific functions.
+func IsLiked(db *gorm.DB, userID uint, postID uint) bool {
 	var count int64
 	db.Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, postID).Count(&count)
 	return count > 0
 }
 
-func ToggleInteraction(db *gorm.DB, userID uint, postID uint, interactionType string) (ToggleInfo, error) {
+func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 	if !userExists(db, userID) {
 		return ToggleInfo{}, errors.New(constants.ErrNoUser)
 	}
 
 	var toggleResult ToggleInfo
-	var currentInteraction models.Like
 
-	columnName := "likes_count"
-	if interactionType == "repost" {
-		columnName = "reposts_count"
-	}
-
-	if isInteracted(db, userID, postID) {
+	if IsLiked(db, userID, postID) {
 		db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
-		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" - 1"))
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count - 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       false,
-			MessageStatus: "decreased count successfully",
+			MessageStatus: "unliked successfully",
 		}
 	} else {
-		currentInteraction = models.Like{
-			PostID: postID,
-			UserID: userID,
-		}
-		db.Create(&currentInteraction)
-
-		// Increment count
-		db.Model(&models.Post{}).Where("id = ?", postID).Update(columnName, gorm.Expr(columnName+" + 1"))
+		newLike := models.Like{PostID: postID, UserID: userID}
+		db.Create(&newLike)
+		db.Model(&models.Post{}).Where("id = ?", postID).Update("likes_count", gorm.Expr("likes_count + 1"))
 
 		toggleResult = ToggleInfo{
 			IsLiked:       true,
-			MessageStatus: "increased count successfully",
+			MessageStatus: "liked successfully",
 		}
 	}
 
@@ -268,6 +239,7 @@ func CreatePost(db *gorm.DB,
 
 type ToggleInfo struct {
 	IsLiked       bool
+	IsReposted    bool
 	MessageStatus string
 }
 
@@ -368,6 +340,19 @@ func GetUsernameIDFromContext(c *gin.Context) (string, error) {
 	}
 
 	return usernameStr, nil
+}
+
+func GetNicknameFromContext(c *gin.Context) (string, error) {
+	nickname, exists := c.Get("nickname")
+	if !exists {
+		return "", errors.New("unauthorized")
+	}
+	nicknameStr, ok := nickname.(string)
+	if !ok {
+		return "", errors.New("invalid nickname type")
+	}
+
+	return nicknameStr, nil
 }
 
 func GetUserIDFromContext(c *gin.Context) (uint, error) {
@@ -476,6 +461,34 @@ func ProcessPosts(rawPosts []models.Post) []mappers.PostResponse {
 	}
 
 	return processedPosts
+}
+
+func ProcessPost(post models.Post) mappers.PostResponse {
+	var parentPost *mappers.ParentPostResponse
+	if post.ParentPost != nil {
+		parentPost = &mappers.ParentPostResponse{
+			ID:        post.ParentPost.ID,
+			CreatedAt: post.ParentPost.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+			Username:  post.ParentPost.Username,
+			Nickname:  post.ParentPost.Nickname,
+			Body:      post.ParentPost.Body,
+		}
+	}
+
+	return mappers.PostResponse{
+		ID:           post.ID,
+		CreatedAt:    post.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+		UserID:       post.UserID,
+		Nickname:     post.Nickname,
+		Username:     post.Username,
+		ParentID:     post.ParentID,
+		Quote:        post.Quote,
+		Body:         post.Body,
+		RepostsCount: post.RepostsCount,
+		LikesCount:   post.LikesCount,
+		IsRepost:     post.IsRepost,
+		ParentPost:   parentPost,
+	}
 }
 
 func EnlistUsers(arrayOfUsers []models.User) []string {

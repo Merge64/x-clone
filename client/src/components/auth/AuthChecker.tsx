@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { validateToken } from './auth';
+import { validateToken } from '../../utils/auth';
 
 interface AuthCheckerProps {
   children: React.ReactNode;

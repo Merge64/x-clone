@@ -34,17 +34,18 @@ func MapPostsToResponses(posts []models.Post) []PostResponse {
 }
 
 type PostResponse struct {
-	ID         uint                `json:"id"`
-	CreatedAt  string              `json:"created_at"`
-	UserID     uint                `json:"userid"`
-	Nickname   string              `json:"nickname"`
-	Username   string              `json:"username"`
-	ParentID   *uint               `json:"parent_id"`
-	Quote      *string             `json:"quote"`
-	Body       string              `json:"body"`
-	LikesCount uint                `json:"likes_count"`
-	IsRepost   bool                `json:"is_repost"`
-	ParentPost *ParentPostResponse `json:"parent_post,omitempty"`
+	ID           uint                `json:"id"`
+	CreatedAt    string              `json:"created_at"`
+	UserID       uint                `json:"userid"`
+	Nickname     string              `json:"nickname"`
+	Username     string              `json:"username"`
+	ParentID     *uint               `json:"parent_id"`
+	Quote        *string             `json:"quote"`
+	Body         string              `json:"body"`
+	RepostsCount uint                `json:"reposts_count"`
+	LikesCount   uint                `json:"likes_count"`
+	IsRepost     bool                `json:"is_repost"`
+	ParentPost   *ParentPostResponse `json:"parent_post,omitempty"`
 }
 
 type ParentPostResponse struct {
@@ -68,16 +69,17 @@ func ProcessPost(post models.Post) PostResponse {
 	}
 
 	return PostResponse{
-		ID:         post.ID,
-		CreatedAt:  post.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
-		UserID:     post.UserID,
-		Nickname:   post.Nickname,
-		Username:   post.Username,
-		ParentID:   post.ParentID,
-		Quote:      post.Quote,
-		Body:       post.Body,
-		LikesCount: post.LikesCount,
-		IsRepost:   post.IsRepost,
-		ParentPost: parentPost, // <- This ensures parent post is included
+		ID:           post.ID,
+		CreatedAt:    post.CreatedAt.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+		UserID:       post.UserID,
+		Nickname:     post.Nickname,
+		Username:     post.Username,
+		ParentID:     post.ParentID,
+		Quote:        post.Quote,
+		Body:         post.Body,
+		RepostsCount: post.RepostsCount,
+		LikesCount:   post.LikesCount,
+		IsRepost:     post.IsRepost,
+		ParentPost:   parentPost, // <- This ensures parent post is included
 	}
 }

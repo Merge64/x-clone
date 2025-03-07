@@ -9,7 +9,7 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - server/.env
     depends_on:
       - db
 
@@ -17,7 +17,7 @@ services:
     container_name: x-db
     image: postgres:latest
     env_file:
-      - .env
+      - server/.env
     ports:
       - "5433:5432"
     volumes:

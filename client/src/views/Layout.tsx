@@ -1,7 +1,7 @@
-import React from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { X, Home, User, LogOut, Bell, Search } from "lucide-react";
-import { logout } from "../utils/auth";
+import React from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { X, Home, User, LogOut, Bell } from 'lucide-react';
+import { logout } from '../utils/auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,11 +10,25 @@ interface LayoutProps {
 function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await logout();
     navigate("/");
   };
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const userInfo = await getUserInfo();
+        setCurrentUsername(userInfo.username);
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -51,8 +65,8 @@ function Layout({ children }: LayoutProps) {
               </li>
               <li>
                 <Link
-                  to="/profile/me"
-                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
+                    to={`/${currentUsername ?? ''}`}
+                    className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
                     location.pathname.startsWith("/profile") ? "font-bold" : ""
                   }`}
                 >
@@ -83,10 +97,12 @@ function Layout({ children }: LayoutProps) {
           </button>
         </div>
       </div>
-
+      
       {/* Main content */}
       <div className="ml-64 flex-1">
-        <main className="max-w-2xl mx-auto">{children}</main>
+        <main className="max-w-2xl mx-auto">
+          {children}
+        </main>
       </div>
     </div>
   );

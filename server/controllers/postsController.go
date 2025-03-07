@@ -32,12 +32,38 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		postID, errPostID := strconv.Atoi(c.Param("postid"))
+		if errPostID != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		var post models.Post
+		// Use Preload to eagerly load the ParentPost relationship
+		if err := db.Preload("ParentPost").First(&post, postID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
+			return
+		}
+
+		// Process the single post using the ProcessPost function
+		processedPost := user.ProcessPost(post)
+
+		c.JSON(http.StatusOK, gin.H{"post": processedPost})
+	}
+}
+
 func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract user details
 		userID, _ := user.GetUserIDFromContext(c)
 		username, _ := user.GetUsernameIDFromContext(c)
-		nickname, _ := getNicknameFromContext(c)
+		nickname, _ := user.GetNicknameFromContext(c)
 
 		// Parse and validate request
 		req, err := parsePostRequest(c)
@@ -106,28 +132,6 @@ func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		postID, errPostID := strconv.Atoi(c.Param("postid"))
-		if errPostID != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
-			return
-		}
-
-		var post models.Post
-		if err := db.First(&post, postID).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrNoPost})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred while fetching the post"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"post": post})
-	}
-}
-
 func EditPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postID, atoiErr := strconv.Atoi(c.Param("postid"))
@@ -161,6 +165,10 @@ func DeletePostHandler(db *gorm.DB) gin.HandlerFunc {
 func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, _ := user.GetUserIDFromContext(c)
+		if userID == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: User ID is missing or invalid"})
+			return
+		}
 
 		parentIDStr := c.Param("postid")
 		parentID, err := strconv.Atoi(parentIDStr)
@@ -168,37 +176,36 @@ func CreateRepostHandler(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent post ID"})
 			return
 		}
+		parentIDUint := uint(parentID)
 
-		// Check if the user already has a repost of this post
-		var existingRepost models.Post
-		errCheck := db.Where("user_id = ? AND parent_id = ? AND is_repost = ?",
-			userID,
-			parentID,
-			true).First(&existingRepost).Error
-
-		if errCheck == nil {
-			// Existing repost found → Delete it
-			deleteError := deletePost(db, userID, int(existingRepost.ID))
-			c.JSON(deleteError.Status, deleteError.Message)
-			_, errToggle := user.ToggleInteraction(db, userID, uint(parentID), "repost")
-			if errToggle != nil {
-				return
-			}
+		parentPost, err := resolveParentPost(db, parentIDUint)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Original post or comment not found"})
 			return
 		}
 
-		// If no existing repost, create a new one
-		repostError := createRepost(c, db, parentID)
-		if repostError.Status != http.StatusCreated {
-			c.JSON(repostError.Status, repostError.Message)
+		handled, err := handleExistingRepost(db, userID, parentPost.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle repost"})
 			return
 		}
-		// Increment repost count
-		_, errToggle := user.ToggleInteraction(db, userID, uint(parentID), "repost")
-		if errToggle != nil {
+		if handled {
+			c.JSON(http.StatusOK, gin.H{"message": "Repost deleted successfully"})
 			return
 		}
-		c.JSON(http.StatusCreated, gin.H{"message": "Repost created successfully"})
+
+		postErr := createRepost(c, db, int(parentPost.ID))
+		if postErr.Status != http.StatusCreated {
+			c.JSON(postErr.Status, postErr.Message)
+			return
+		}
+
+		if errIncrement := incrementRepostCount(db, parentPost.ID); errIncrement != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update repost count"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, postErr.Message)
 	}
 }
 
@@ -213,7 +220,7 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		toggleResult, toggleErr := user.ToggleInteraction(db, likerID, uint(postID), constants.Empty)
+		toggleResult, toggleErr := user.ToggleLike(db, likerID, uint(postID))
 		if toggleErr != nil {
 			log.Println("Toggle Like error:", toggleErr)
 			if toggleResult.IsLiked {
@@ -228,7 +235,375 @@ func ToggleLikeHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func CheckRepostedHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user ID from context
+		userID, err := user.GetUserIDFromContext(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			return
+		}
+
+		// Get post ID from URL parameter
+		postIDStr := c.Param("postid")
+		postID, err := strconv.Atoi(postIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		// Check for existing repost
+		var existingRepost models.Post
+		err = db.Where("user_id = ? AND parent_id = ? AND is_repost = ?",
+			userID,
+			postID,
+			true).
+			First(&existingRepost).Error
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusOK, gin.H{"reposted": false})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			return
+		}
+
+		// If no error, repost exists
+		c.JSON(http.StatusOK, gin.H{"reposted": true})
+	}
+}
+
+func CheckIfLikedHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user ID from context
+		userID, err := user.GetUserIDFromContext(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			return
+		}
+
+		// Get post ID from URL parameter
+		postIDStr := c.Param("postid")
+		postID, err := strconv.Atoi(postIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		// Check if like exists in database
+		var like models.Like
+		err = db.Where("user_id = ? AND post_id = ?", userID, postID).First(&like).Error
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusOK, gin.H{"liked": false})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			return
+		}
+
+		// If no error, like exists
+		c.JSON(http.StatusOK, gin.H{"liked": true})
+	}
+}
+
+func GetCommentsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		postIDStr := c.Param("postid")
+		postID, err := strconv.ParseUint(postIDStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		var comments []models.Post
+		// Preload ParentPost to include it in the processing
+		result := db.Preload("ParentPost").Where("parent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
+			return
+		}
+
+		// Process each comment using ProcessPost
+		processedComments := make([]mappers.PostResponse, len(comments))
+		for i, comment := range comments {
+			processedComments[i] = user.ProcessPost(comment) // Use user.ProcessPost if part of a package
+		}
+
+		c.JSON(http.StatusOK, gin.H{"comments": processedComments})
+	}
+}
+
+func CountRepostsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract parent post ID from URL
+		postIDStr := c.Param("postid")
+		postID, err := strconv.ParseUint(postIDStr, 10, 32) // uint64
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		// Convert uint64 to uint
+		postIDUint := uint(postID)
+
+		// Fetch the repost count
+		count, err := GetRepostCount(db, postIDUint)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve repost count"})
+			return
+		}
+
+		// Return the count in JSON format
+		c.JSON(http.StatusOK, gin.H{"reposts_count": count})
+	}
+}
+
+func CountLikesHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract parent post ID from URL
+		postIDStr := c.Param("postid")
+		postID, err := strconv.ParseUint(postIDStr, 10, 32) // uint64
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		// Convert uint64 to uint
+		postIDUint := uint(postID)
+
+		// Fetch the repost count
+		count, err := GetLikesCount(db, postIDUint)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve repost count"})
+			return
+		}
+
+		// Return the count in JSON format
+		c.JSON(http.StatusOK, gin.H{"likes_count": count})
+	}
+}
+
+func CountCommentsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract parent post ID from URL
+		postIDStr := c.Param("postid")
+		postID, err := strconv.ParseUint(postIDStr, 10, 32) // uint64
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		// Convert uint64 to uint
+		postIDUint := uint(postID)
+
+		// Fetch the repost count
+		count, err := GetCommentsCount(db, postIDUint)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve repost count"})
+			return
+		}
+
+		// Return the count in JSON format
+		c.JSON(http.StatusOK, gin.H{"comments_count": count})
+	}
+}
+
+func CreateCommentHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract parent post ID from URL
+		postIDStr := c.Param("postid")
+		parentPostID, err := strconv.ParseUint(postIDStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+
+		// Check if parent post exists
+		var parentPost models.Post
+		if errDB := db.First(&parentPost, parentPostID).Error; errDB != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Parent post not found"})
+			return
+		}
+
+		// Extract user details
+		userID, _ := user.GetUserIDFromContext(c)
+		username, _ := user.GetUsernameIDFromContext(c)
+		nickname, _ := user.GetNicknameFromContext(c)
+
+		// Parse request body
+		var req struct {
+			Body  string  `json:"body"`
+			Quote *string `json:"quote"`
+		}
+		if errJSON := c.ShouldBindJSON(&req); errJSON != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": errJSON.Error()})
+			return
+		}
+
+		// Validate body
+		if errValidate := validatePostBody(req.Body); errValidate != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": errValidate.Error()})
+			return
+		}
+		// Create the comment (set ParentID and IsRepost=false)
+		parentIDUint := uint(parentPostID)
+		createdPost, err := user.CreatePost(
+			db,
+			userID,
+			nickname,
+			&parentIDUint, // ParentID from URL
+			username,
+			req.Quote,
+			req.Body,
+			false, // isRepost explicitly set to false
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create comment"})
+			return
+		}
+
+		// Return the created comment
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Comment created successfully",
+			"comment": createdPost,
+		})
+	}
+}
+
 // AUX.
+
+func resolveParentPost(db *gorm.DB, parentID uint) (models.Post, error) {
+	var parentPost models.Post
+	if err := db.First(&parentPost, parentID).Error; err != nil {
+		return models.Post{}, err
+	}
+
+	if parentPost.IsRepost && parentPost.ParentID != nil {
+		var originalPost models.Post
+		if err := db.First(&originalPost, *parentPost.ParentID).Error; err != nil {
+			return models.Post{}, err
+		}
+		parentPost = originalPost
+	}
+
+	return parentPost, nil
+}
+
+func handleExistingRepost(db *gorm.DB, userID, parentPostID uint) (bool, error) {
+	var existingRepost models.Post
+	err := db.Where("user_id = ? AND parent_id = ? AND is_repost = ?", userID, parentPostID, true).
+		First(&existingRepost).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	if errDB := db.Delete(&existingRepost).Error; errDB != nil {
+		return false, errDB
+	}
+
+	if errIncrement := decrementRepostCount(db, parentPostID); errIncrement != nil {
+		return false, errIncrement
+	}
+
+	return true, nil
+}
+
+func incrementRepostCount(db *gorm.DB, parentPostID uint) error {
+	return db.Model(&models.Post{ID: parentPostID}).Update("reposts_count", gorm.Expr("reposts_count + 1")).Error
+}
+
+func decrementRepostCount(db *gorm.DB, parentPostID uint) error {
+	return db.Model(&models.Post{ID: parentPostID}).Update("reposts_count", gorm.Expr("reposts_count - 1")).Error
+}
+
+func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
+	userIDVal, _ := c.Get("userID")
+	username, _ := user.GetUsernameIDFromContext(c)
+	nickname, _ := user.GetNicknameFromContext(c)
+
+	currentUserID, ok := userIDVal.(uint)
+	if !ok {
+		return PostError{
+			Message: gin.H{"error": "invalid user ID type"},
+			Status:  http.StatusInternalServerError,
+		}
+	}
+
+	var payload struct {
+		Quote string `json:"quote"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		return PostError{
+			Message: gin.H{"error": "invalid JSON payload"},
+			Status:  http.StatusBadRequest,
+		}
+	}
+
+	// Create the repost with resolved parent ID
+	parentIDUint := uint(parentID)
+	createdPost, err := user.CreatePost(
+		db,
+		currentUserID,
+		nickname,
+		&parentIDUint,
+		username,
+		&payload.Quote,
+		constants.Empty,
+		true, // isRepost is always true
+	)
+	if err != nil {
+		return PostError{
+			Message: gin.H{"error": "failed to create repost"},
+			Status:  http.StatusInternalServerError,
+		}
+	}
+
+	// Fetch the created repost with ParentPost preloaded
+	var postWithParent models.Post
+	if errPreloadDB := db.Preload("ParentPost").First(&postWithParent, createdPost.ID).Error; errPreloadDB != nil {
+		return PostError{
+			Message: gin.H{"error": "failed to fetch repost"},
+			Status:  http.StatusInternalServerError,
+		}
+	}
+
+	return PostError{
+		Message: gin.H{"message": "repost created successfully"},
+		Status:  http.StatusCreated,
+	}
+}
+
+func GetRepostCount(db *gorm.DB, postID uint) (int64, error) {
+	var repostCount int64
+	err := db.Model(&models.Post{}).
+		Where("id = ?", postID).
+		Pluck("reposts_count", &repostCount).Error // Use Pluck instead of Select + Count
+	return repostCount, err
+}
+
+func GetLikesCount(db *gorm.DB, postID uint) (int64, error) {
+	var likesCount int64
+	err := db.Model(&models.Post{}).
+		Where("id = ?", postID).
+		Pluck("likes_count", &likesCount).Error // Use Pluck instead of Select + Count
+	return likesCount, err
+}
+
+func GetCommentsCount(db *gorm.DB, postID uint) (int64, error) {
+	var commentsCount int64
+
+	// Query for counting comments with the specific parent_id, which is postID
+	err := db.Model(&models.Post{}).
+		Where("parent_id = ? AND is_repost = ?", postID, false). // Fixing the WHERE clause
+		Count(&commentsCount).Error                              // Use Count directly instead of Pluck for counting rows
+
+	return commentsCount, err
+}
 
 // Parses the request body and returns the structured request.
 func parsePostRequest(c *gin.Context) (*struct {
@@ -286,19 +661,6 @@ func fetchAndProcessPost(db *gorm.DB, postID uint) (mappers.PostResponse, error)
 		return mappers.PostResponse{}, err
 	}
 	return mappers.ProcessPost(postWithParent), nil
-}
-
-func getNicknameFromContext(c *gin.Context) (string, error) {
-	nickname, exists := c.Get("nickname")
-	if !exists {
-		return "", errors.New("unauthorized")
-	}
-	nicknameStr, ok := nickname.(string)
-	if !ok {
-		return "", errors.New("invalid nickname type")
-	}
-
-	return nicknameStr, nil
 }
 
 func validatePostBody(body string) error {
@@ -362,72 +724,6 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 
 	return PostError{Message: gin.H{"message": "post updated successfully"},
 		Status: http.StatusOK}
-}
-
-func createRepost(c *gin.Context, db *gorm.DB, parentID int) PostError {
-	userIDVal, _ := c.Get("userID")
-	username, _ := user.GetUsernameIDFromContext(c)
-	nickname, _ := getNicknameFromContext(c)
-
-	currentUserID, ok := userIDVal.(uint)
-	if !ok {
-		return PostError{Message: gin.H{"error": "invalid user ID type"},
-			Status: http.StatusInternalServerError}
-	}
-
-	var payload struct {
-		Quote string `json:"quote"`
-	}
-
-	if errJSON := c.ShouldBindJSON(&payload); errJSON != nil {
-		return PostError{Message: gin.H{"error": "invalid JSON payload"},
-			Status: http.StatusBadRequest}
-	}
-
-	var parentPost models.Post
-	if errDB := db.First(&parentPost, parentID).Error; errDB != nil {
-		return PostError{Message: gin.H{"error": "original post not found"},
-			Status: http.StatusNotFound}
-	}
-
-	if parentPost.ParentID != nil && *parentPost.ParentID != 0 {
-		var originalPost models.Post
-		if errDB := db.First(&originalPost, *parentPost.ParentID).Error; errDB != nil {
-			return PostError{Message: gin.H{"error": "original post not found"},
-				Status: http.StatusNotFound}
-		}
-		parentPost = originalPost
-	}
-
-	r := models.Post{
-		UserID:   currentUserID,
-		ParentID: &parentPost.ID,
-		Username: username,
-		Body:     "",
-		Quote:    &payload.Quote,
-		Nickname: nickname,
-		IsRepost: true,
-	}
-
-	// Create the post
-	createdPost, errDB := user.CreatePost(db, r.UserID, r.Nickname, r.ParentID, r.Username, r.Quote, r.Body, r.IsRepost)
-	if errDB != nil {
-		return PostError{Message: gin.H{"error": "failed to create repost"},
-			Status: http.StatusInternalServerError}
-	}
-
-	// Fetch the post with ParentPost preloaded
-	var postWithParent models.Post
-	if err := db.Preload("ParentPost").First(&postWithParent, createdPost.ID).Error; err != nil {
-		return PostError{Message: gin.H{"error": "failed to fetch repost"},
-			Status: http.StatusInternalServerError}
-	}
-
-	// Process the post to include parent_post in the response
-	processedPost := mappers.ProcessPost(postWithParent)
-
-	return PostError{Message: gin.H{"message": "repost created successfully", "post": processedPost},
-		Status: http.StatusCreated}
 }
 
 func deletePost(db *gorm.DB, currentUserID uint, postID int) PostError {

@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import AuthBackground from '../components/AuthBackground';
+import AuthBackground from './AuthBackground';
 
 function LoginSignupPage() {
   return (

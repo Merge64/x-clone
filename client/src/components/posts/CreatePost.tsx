@@ -87,10 +87,10 @@ function CreatePost({ onPostCreated }: CreatePostProps) {
                 disabled={isSubmitting || !body.trim() || characterCount > MAX_CHARS}
                 className={`px-4 py-2 rounded-full font-bold ${
                   isSubmitting || !body.trim() || characterCount > MAX_CHARS
-                    ? 'bg-blue-800 text-gray-300 cursor-not-allowed'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    ? 'bg-[#787A7A] text-black cursor-not-allowed'
+                    : 'bg-[#EFF3F4] hover:bg-[#D7DBDC] text-black'
                 }`}
-              >
+              > 
                 {isSubmitting ? 'Posting...' : 'Post'}
               </button>
             </div>

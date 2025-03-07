@@ -20,8 +20,8 @@ func SearchHandler(db *gorm.DB) gin.HandlerFunc {
 
 		filter := c.Query("f")
 		switch filter {
-		case constants.Empty:
-			posts, err := user.SearchPostsByKeywords(db, keywordProcessed)
+		case "":
+			posts, err := user.SearchPostsByKeywords(db, keyword)
 			if err != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 				return

@@ -95,14 +95,20 @@ func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post,
 	var posts []models.Post
 	var result *gorm.DB
 
-	if len(keyword) < constants.SearchedWordLen {
+	switch {
+	case keyword == constants.Empty:
+		result = db.Order(orderBy).Find(&posts)
+		fmt.Println("posts:", posts)
+
+	case len(keyword) < constants.SearchedWordLen:
 		queryPattern := fmt.Sprintf("\\m%s\\M", keyword)
 		q := db.Where("body ~* ?", queryPattern)
 		if orderBy != constants.Empty {
 			q = q.Order(orderBy)
 		}
 		result = q.Find(&posts)
-	} else {
+
+	default:
 		queryPattern := "%" + keyword + "%"
 		q := db.Where("body ILIKE ?", queryPattern)
 		if orderBy != constants.Empty {
@@ -493,4 +499,15 @@ func EnlistUsers(arrayOfUsers []models.User) []string {
 	}
 
 	return usersList
+}
+
+func IsFollowing(db *gorm.DB, followedID uint, currentUserID uint) (bool, error) {
+	var follow models.Follow
+	db.Where("following_user_id = ? AND followed_user_id = ?", currentUserID, followedID).First(&follow)
+
+	if follow.ID == 0 {
+		return false, errors.New("not following user")
+	}
+
+	return true, nil
 }

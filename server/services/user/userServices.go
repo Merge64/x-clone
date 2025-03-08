@@ -193,13 +193,21 @@ func GetAllPosts(db *gorm.DB) ([]models.Post, error) {
 func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) {
 	var posts []models.Post
 	var user models.User
-	db.Where("username = ?", username).First(&user)
-	result := db.Where("user_id = ?", user.ID).Find(&posts)
+
+	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("user with username %s not found", username)
+		}
+		return nil, fmt.Errorf("internal server error: %w", err)
+	}
+
+	result := db.Preload("ParentPost").Where("user_id = ?", user.ID).Order("created_at desc").Find(&posts)
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
 	}
+
 	if result.RowsAffected == 0 {
-		return nil, errors.New(constants.ErrNoPost)
+		return nil, fmt.Errorf("no posts found for user %s", username)
 	}
 
 	return posts, nil
@@ -276,17 +284,28 @@ func IsEmail(email string) bool {
 	return re.MatchString(email)
 }
 
-func GetUserByUsername(db *gorm.DB, username string) (models.User, error) {
+func GetUserProfileByUsername(db *gorm.DB, username string) (*mappers.Response, error) {
 	var user models.User
-	err := db.Table("users").Where("username = ?", username).First(&user).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return user, errors.New(constants.ErrNoUser)
-		}
-		return user, errors.New("failed to retrieve the user from the database")
+
+	result := db.Table("users").
+		Select(`
+            users.id, 
+            users.nickname,
+            users.username,
+            users.created_at,
+            COUNT(follows.id) AS follower_count
+        `).
+		Joins("LEFT JOIN follows ON follows.followed_username = users.username").
+		Where("LOWER(users.username) = LOWER(?)", username).
+		Group("users.id, users.nickname, users.username, users.created_at").
+		First(&user)
+
+	if result.Error != nil {
+		return nil, result.Error
 	}
 
-	return user, nil
+	response := mappers.MapUserToResponse(user)
+	return &response, nil
 }
 
 func GetSimplePostByID(db *gorm.DB, postID uint) (models.Post, error) {
@@ -311,24 +330,58 @@ func UpdateProfile(db *gorm.DB, user *models.User) error {
 	return db.Save(user).Error
 }
 
-func GetFollowers(db *gorm.DB, username string) ([]models.User, error) {
+func GetFollowers(db *gorm.DB, username string) ([]mappers.Response, error) {
 	var followers []models.User
-	currentUser, getUserErr := GetUserByUsername(db, username)
+	currentUser, getUserErr := GetUserProfileByUsername(db, username)
 	if getUserErr != nil {
 		return nil, getUserErr
 	}
 
 	result := db.Table("users").
-		Select("users.*").
-		Joins("JOIN follows ON users.id = follows.following_username").
+		Select(`
+            users.id, 
+            users.nickname,
+            users.username,
+            users.created_at,
+            COUNT(follows.id) AS follower_count
+        `).
+		Joins("JOIN follows ON users.username = follows.following_username").
 		Where("followed_username = ?", currentUser.Username).
+		Group("users.id, users.nickname, users.username, users.created_at").
 		Find(&followers)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
 	}
 
-	return followers, nil
+	return mappers.MapUsersToResponses(followers), nil
+}
+
+func GetFollowing(db *gorm.DB, username string) ([]mappers.Response, error) {
+	var following []models.User
+	currentUser, getUserErr := GetUserProfileByUsername(db, username)
+	if getUserErr != nil {
+		return nil, getUserErr
+	}
+
+	result := db.Table("users").
+		Select(`
+            users.id, 
+            users.nickname,
+            users.username,
+            users.created_at,
+            COUNT(follows.id) AS follower_count
+        `).
+		Joins("JOIN follows ON users.username = follows.followed_username").
+		Where("following_username = ?", currentUser.Username).
+		Group("users.id, users.nickname, users.username, users.created_at").
+		Find(&following)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("internal server error: %w", result.Error)
+	}
+
+	return mappers.MapUsersToResponses(following), nil
 }
 
 func GetUsernameIDFromContext(c *gin.Context) (string, error) {
@@ -369,26 +422,6 @@ func GetUserIDFromContext(c *gin.Context) (uint, error) {
 	}
 
 	return userID, nil
-}
-
-func GetFollowing(db *gorm.DB, username string) ([]models.User, error) {
-	var following []models.User
-	currentUser, getUserErr := GetUserByUsername(db, username)
-	if getUserErr != nil {
-		return nil, getUserErr
-	}
-
-	result := db.Table("users").
-		Select("users.*").
-		Joins("JOIN follows ON users.id = follows.followed_username").
-		Where("following_username = ?", currentUser.Username).
-		Find(&following)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("internal server error: %w", result.Error)
-	}
-
-	return following, nil
 }
 
 func IsPostOwner(db *gorm.DB, userID, postID uint) bool {
@@ -493,7 +526,7 @@ func ProcessPost(post models.Post) mappers.PostResponse {
 	}
 }
 
-func EnlistUsers(arrayOfUsers []models.User) []string {
+func EnlistUsers(arrayOfUsers []mappers.Response) []string {
 	var usersList []string
 
 	for _, currentUser := range arrayOfUsers {

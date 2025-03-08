@@ -11,25 +11,32 @@ import (
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
-		var profile struct {
-			// NameTag   string
-			Username  string
-			Location  string
-			CreatedAt string
-		}
 
-		currentUser, getUserErr := user.GetUserByUsername(db, username)
-		if getUserErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": getUserErr.Error()})
+		var u models.User
+		if err := db.Where("username = ?", username).First(&u).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 
-		profile.Username = currentUser.Username
-		profile.CreatedAt = currentUser.CreatedAt.String()
-		if currentUser.Location != nil {
-			profile.Location = *currentUser.Location
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "View Account successfully", "profile": profile})
+		// Fetch follower and following counts
+		var followerCount int64
+		db.Model(&models.Follow{}).Where("followed_username = ?", username).Count(&followerCount)
+
+		var followingCount int64
+		db.Model(&models.Follow{}).Where("following_username = ?", username).Count(&followingCount)
+
+		// Return profile data with counts
+		c.JSON(http.StatusOK, gin.H{
+			"profile": gin.H{
+				"username":        u.Username,
+				"nickname":        u.Nickname,
+				"mail":            u.Mail,
+				"location":        u.Location,
+				"follower_count":  followerCount,
+				"following_count": followingCount,
+				"created_at":      u.CreatedAt, // Include the CreatedAt field
+			},
+		})
 	}
 }
 
@@ -65,8 +72,12 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		listFollowers := user.EnlistUsers(followers)
+		followerCount := len(followers)
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Followers Profile successfully", "followers": listFollowers})
+		c.JSON(http.StatusOK, gin.H{
+			"followers":      listFollowers,
+			"follower_count": followerCount,
+		})
 	}
 }
 
@@ -81,8 +92,12 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		listFollowing := user.EnlistUsers(following)
+		followingCount := len(following)
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": listFollowing})
+		c.JSON(http.StatusOK, gin.H{
+			"following":       listFollowing,
+			"following_count": followingCount,
+		})
 	}
 }
 

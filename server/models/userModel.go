@@ -2,16 +2,20 @@ package models
 
 import (
 	"gorm.io/gorm"
+	"time"
 )
 
 type User struct {
-	gorm.Model
-	Nickname      string  `json:"nickname"`
-	Username      string  `json:"username"`
-	Mail          string  `json:"mail"`
-	Password      string  `json:"password"`
-	Location      *string `json:"location"`
-	FollowerCount uint    `json:"follower_count"`
+	ID            uint `gorm:"primaryKey"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
+	Nickname      string         `json:"nickname"`
+	Username      string         `json:"username"`
+	Mail          string         `json:"mail"`
+	Password      string         `json:"password"`
+	Location      *string        `json:"location"`
+	FollowerCount uint           `json:"follower_count"`
 }
 
 type Follow struct {

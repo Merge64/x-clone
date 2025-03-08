@@ -46,21 +46,20 @@ function ProfilePage() {
     setNotFound(false);
 
     try {
+      // Fetch user profile (now includes follower & following counts)
       const profileData = await getUserProfile(username);
 
       setUserInfo({
-        username: profileData.Username,
-        displayName: profileData.Username,
-        bio: profileData.Bio || "This is a bio placeholder",
-        location: profileData.Location || "",
+        username: profileData.username,
+        nickname: profileData.nickname,
+        location: profileData.location,
         joinedAt: profileData.CreatedAt || new Date().toISOString(),
-        followersCount: profileData.FollowersCount || 0,
-        followingCount: profileData.FollowingCount || 0,
+        followersCount: profileData.followerCount,
+        followingCount: profileData.followingCount,
       });
 
       const response = await getPostsByUsername(username);
-      const fetchedPosts = response.posts || [];
-      setPosts(fetchedPosts);
+      setPosts(response);
     } catch (profileError) {
       console.error(`Error fetching profile for ${username}:`, profileError);
       setNotFound(true);
@@ -151,7 +150,7 @@ function ProfilePage() {
           </Link>
           <div>
             <h1 className="text-xl font-bold">
-              {userInfo?.displayName || userInfo?.username}
+              {userInfo?.nickname}
             </h1>
             <p className="text-gray-500 text-sm">{posts.length} posts</p>
           </div>
@@ -164,7 +163,7 @@ function ProfilePage() {
         <div className="flex justify-between">
           <div className="mt-[-48px]">
             <div className="w-24 h-24 rounded-full bg-black border-4 border-black flex items-center justify-center text-3xl font-bold">
-              {userInfo?.username?.charAt(0).toUpperCase() || "?"}
+              {(userInfo.nickname || userInfo.username).charAt(0).toUpperCase() || "?"}
             </div>
           </div>
 
@@ -174,11 +173,10 @@ function ProfilePage() {
             </button>
           ) : (
             <button
-              className={`px-4 py-1.5 rounded-full font-bold transition-colors ${
-                isFollowing
+              className={`px-4 py-1.5 rounded-full font-bold transition-colors ${isFollowing
                   ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
                   : "bg-white text-black hover:bg-gray-200"
-              }`}
+                }`}
               onClick={handleFollowAction}
             >
               {isFollowing ? "Unfollow" : "Follow"}
@@ -188,7 +186,7 @@ function ProfilePage() {
 
         <div className="mt-4">
           <h2 className="text-xl font-bold">
-            {userInfo?.displayName || userInfo?.username}
+            {userInfo?.nickname || userInfo?.username}
           </h2>
           <p className="text-gray-500">@{userInfo?.username}</p>
 
@@ -218,46 +216,43 @@ function ProfilePage() {
               <span className="text-gray-500">Followers</span>
             </div>
           </div>
+
         </div>
       </div>
 
       <div className="flex border-b border-gray-800">
         <button
-          className={`flex-1 py-4 text-center font-bold ${
-            activeTab === "posts"
+          className={`flex-1 py-4 text-center font-bold ${activeTab === "posts"
               ? "text-white border-b-4 border-blue-500"
               : "text-gray-500 hover:bg-gray-900"
-          }`}
+            }`}
           onClick={() => setActiveTab("posts")}
         >
           Posts
         </button>
         <button
-          className={`flex-1 py-4 text-center font-bold ${
-            activeTab === "replies"
+          className={`flex-1 py-4 text-center font-bold ${activeTab === "replies"
               ? "text-white border-b-4 border-blue-500"
               : "text-gray-500 hover:bg-gray-900"
-          }`}
+            }`}
           onClick={() => setActiveTab("replies")}
         >
           Replies
         </button>
         <button
-          className={`flex-1 py-4 text-center font-bold ${
-            activeTab === "media"
+          className={`flex-1 py-4 text-center font-bold ${activeTab === "media"
               ? "text-white border-b-4 border-blue-500"
               : "text-gray-500 hover:bg-gray-900"
-          }`}
+            }`}
           onClick={() => setActiveTab("media")}
         >
           Media
         </button>
         <button
-          className={`flex-1 py-4 text-center font-bold ${
-            activeTab === "likes"
+          className={`flex-1 py-4 text-center font-bold ${activeTab === "likes"
               ? "text-white border-b-4 border-blue-500"
               : "text-gray-500 hover:bg-gray-900"
-          }`}
+            }`}
           onClick={() => setActiveTab("likes")}
         >
           Likes

@@ -32,6 +32,25 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Param("username")
+		rawPosts, errDB := user.GetAllPostsByUsername(db, username)
+
+		if errDB != nil {
+			if errors.Is(errDB, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, listPosts) //
+	}
+}
+
 func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postID, errPostID := strconv.Atoi(c.Param("postid"))
@@ -109,26 +128,6 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 		// Return response
 		c.JSON(http.StatusCreated, gin.H{"message": "Post created successfully", "post": processedPost})
-	}
-}
-
-func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		username := c.Param("username")
-		rawPosts, errDB := user.GetAllPostsByUsername(db, username)
-
-		if errDB != nil {
-			if errors.Is(errDB, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		listPosts := user.ProcessPosts(rawPosts)
-
-		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
 }
 

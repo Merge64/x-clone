@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "./navbar/Navbar";
@@ -18,6 +18,7 @@ function ProfilePage() {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [currentUserInfo, setCurrentUserInfo] = useState<any>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -46,7 +47,6 @@ function ProfilePage() {
     setNotFound(false);
 
     try {
-      // Fetch user profile (now includes follower & following counts)
       const profileData = await getUserProfile(username);
 
       setUserInfo({
@@ -143,131 +143,134 @@ function ProfilePage() {
 
   return (
     <Navbar>
-      <div className="border-b border-gray-800">
-        <div className="p-4 flex items-center">
-          <Link to="/home" className="mr-4">
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold">
-              {userInfo?.nickname}
-            </h1>
-            <p className="text-gray-500 text-sm">{posts.length} posts</p>
-          </div>
-        </div>
-      </div>
+      <div className="relative">
+        <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gray-800" />
+        <div className="absolute right-0 top-0 bottom-0 w-[1px] bg-gray-800" />
 
-      <div className="bg-gray-800 h-32"></div>
-
-      <div className="p-4 border-b border-gray-800">
-        <div className="flex justify-between">
-          <div className="mt-[-48px]">
-            <div className="w-24 h-24 rounded-full bg-black border-4 border-black flex items-center justify-center text-3xl font-bold">
-              {(userInfo.nickname || userInfo.username).charAt(0).toUpperCase() || "?"}
-            </div>
-          </div>
-
-          {isCurrentUser ? (
-            <button className="px-4 py-2 border border-gray-600 rounded-full font-bold hover:bg-gray-900">
-              Edit profile
-            </button>
-          ) : (
-            <button
-              className={`px-4 py-1.5 rounded-full font-bold transition-colors ${isFollowing
-                  ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
-                  : "bg-white text-black hover:bg-gray-200"
-                }`}
-              onClick={handleFollowAction}
-            >
-              {isFollowing ? "Unfollow" : "Follow"}
-            </button>
-          )}
-        </div>
-
-        <div className="mt-4">
-          <h2 className="text-xl font-bold">
-            {userInfo?.nickname || userInfo?.username}
-          </h2>
-          <p className="text-gray-500">@{userInfo?.username}</p>
-
-          {userInfo?.bio && <p className="mt-3">{userInfo.bio}</p>}
-
-          {userInfo?.location && (
-            <p className="mt-2 text-gray-500">{userInfo.location}</p>
-          )}
-
-          <div className="flex items-center mt-3 text-gray-500">
-            <Calendar size={16} className="mr-1" />
-            <span>
-              Joined{" "}
-              {userInfo?.joinedAt
-                ? format(new Date(userInfo.joinedAt), "MMMM yyyy")
-                : "recently"}
-            </span>
-          </div>
-
-          <div className="flex mt-3">
-            <div className="mr-4">
-              <span className="font-bold">{userInfo?.followingCount || 0}</span>{" "}
-              <span className="text-gray-500">Following</span>
-            </div>
+        <div className="border-b border-gray-800">
+          <div className="p-4 flex items-center">
+            <Link to="/home" className="mr-4">
+              <ArrowLeft size={20} />
+            </Link>
             <div>
-              <span className="font-bold">{userInfo?.followersCount || 0}</span>{" "}
-              <span className="text-gray-500">Followers</span>
+              <h1 className="text-xl font-bold">{userInfo?.nickname}</h1>
+              <p className="text-gray-500 text-sm">{posts.length} posts</p>
             </div>
           </div>
-
         </div>
-      </div>
 
-      <div className="flex border-b border-gray-800">
-        <button
-          className={`flex-1 py-4 text-center font-bold ${activeTab === "posts"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
-            }`}
-          onClick={() => setActiveTab("posts")}
-        >
-          Posts
-        </button>
-        <button
-          className={`flex-1 py-4 text-center font-bold ${activeTab === "replies"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
-            }`}
-          onClick={() => setActiveTab("replies")}
-        >
-          Replies
-        </button>
-        <button
-          className={`flex-1 py-4 text-center font-bold ${activeTab === "media"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
-            }`}
-          onClick={() => setActiveTab("media")}
-        >
-          Media
-        </button>
-        <button
-          className={`flex-1 py-4 text-center font-bold ${activeTab === "likes"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
-            }`}
-          onClick={() => setActiveTab("likes")}
-        >
-          Likes
-        </button>
-      </div>
+        <div className="bg-gray-800 h-32"></div>
 
-      <PostList
-        posts={posts}
-        onRepost={fetchUserPosts}
-        emptyMessage={
-          activeTab === "posts"
-            ? `@${userInfo?.username} hasn't posted yet`
-            : `No ${activeTab} to display`
-        }
-      />
+        <div className="p-4 border-b border-gray-800">
+          <div className="flex justify-between">
+            <div className="mt-[-48px]">
+              <div className="w-24 h-24 rounded-full bg-gray-500 border-4 border-black flex items-center justify-center text-3xl font-bold">
+                {(userInfo.nickname || userInfo.username)
+                  .charAt(0)
+                  .toUpperCase() || "?"}
+              </div>
+            </div>
+
+            {isCurrentUser ? (
+              <button className="px-4 py-2 border border-gray-600 rounded-full font-bold hover:bg-gray-900">
+                Edit profile
+              </button>
+            ) : (
+              <button
+                className={`px-4 py-1.5 rounded-full font-bold transition-colors ${
+                  isFollowing
+                    ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
+                    : "bg-white text-black hover:bg-gray-200"
+                }`}
+                onClick={handleFollowAction}
+              >
+                {isFollowing ? "Unfollow" : "Follow"}
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <h2 className="text-xl font-bold">
+              {userInfo?.nickname || userInfo?.username}
+            </h2>
+            <p className="text-gray-500">@{userInfo?.username}</p>
+
+            {userInfo?.bio && <p className="mt-3">{userInfo.bio}</p>}
+
+            {userInfo?.location && (
+              <p className="mt-2 text-gray-500">{userInfo.location}</p>
+            )}
+
+            <div className="flex items-center mt-3 text-gray-500">
+              <Calendar size={16} className="mr-1" />
+              <span>
+                Joined{" "}
+                {userInfo?.joinedAt
+                  ? format(new Date(userInfo.joinedAt), "MMMM yyyy")
+                  : "recently"}
+              </span>
+            </div>
+
+            <div className="flex mt-3">
+              <div className="mr-4">
+                <span className="font-bold">
+                  {userInfo?.followingCount || 0}
+                </span>{" "}
+                <span
+                  className="text-gray-500 cursor-pointer hover:underline"
+                  onClick={() => navigate("./following")}
+                >
+                  Following
+                </span>
+              </div>
+              <div>
+                <span className="font-bold">
+                  {userInfo?.followersCount || 0}
+                </span>{" "}
+                <span
+                  className="text-gray-500 cursor-pointer hover:underline"
+                  onClick={() => navigate("./followers")}
+                >
+                  Followers
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex border-b border-gray-800">
+          <button
+            className={`flex-1 py-4 text-center font-bold ${
+              activeTab === "posts"
+                ? "text-white border-b-4 border-blue-500"
+                : "text-gray-500 hover:bg-gray-900"
+            }`}
+            onClick={() => setActiveTab("posts")}
+          >
+            Posts
+          </button>
+          <button
+            className={`flex-1 py-4 text-center font-bold ${
+              activeTab === "replies"
+                ? "text-white border-b-4 border-blue-500"
+                : "text-gray-500 hover:bg-gray-900"
+            }`}
+            onClick={() => setActiveTab("replies")}
+          >
+            Replies
+          </button>
+        </div>
+
+        <PostList
+          posts={posts}
+          onRepost={fetchUserPosts}
+          emptyMessage={
+            activeTab === "posts"
+              ? `@${userInfo?.username} hasn't posted yet`
+              : `No ${activeTab} to display`
+          }
+        />
+      </div>
     </Navbar>
   );
 }

@@ -266,6 +266,7 @@ export async function getSearchedPosts(keyword: string, orderBy: string) {
   if (orderBy) {
     endpointURl += `&f=${orderBy}`;
   }
+
   try {
     const response = await fetch(endpointURl, {
       method: 'GET',
@@ -321,7 +322,6 @@ export async function UnfollowUser(username: string) {
     return [];
   }
 }
-
 
 export async function IsAlreadyFollowing(username: string): Promise<boolean> {
   try {
@@ -593,5 +593,21 @@ export async function quoteRepost(postId: string, quote: string): Promise<any> {
   } catch (error) {
     console.error('Error quote reposting:', error);
     throw error;
+  }
+}
+
+export async function getFollows(username: string, followType: string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/profile/${username}/${followType}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Failed to get ${followType} user`);
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    console.error(`Error to get ${followType} user:`, error);
+    return [];
   }
 }

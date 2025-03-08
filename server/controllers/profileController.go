@@ -71,12 +71,12 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listFollowers := user.EnlistUsers(followers)
+		//listFollowers := user.EnlistUsers(followers)
 		followerCount := len(followers)
 
 		c.JSON(http.StatusOK, gin.H{
-			"followers":      listFollowers,
-			"follower_count": followerCount,
+			"users":           followers,
+			"following_count": followerCount,
 		})
 	}
 }
@@ -91,11 +91,11 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listFollowing := user.EnlistUsers(following)
+		//listFollowing := user.EnlistUsers(following)
 		followingCount := len(following)
 
 		c.JSON(http.StatusOK, gin.H{
-			"following":       listFollowing,
+			"users":           following,
 			"following_count": followingCount,
 		})
 	}

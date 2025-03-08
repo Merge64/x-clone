@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from "react";
 
 type FollowContextType = {
   followingIds: Set<string>;
-  toggleFollow: (userId: string, isFollowing: boolean) => void;
+  toggleFollow: (username: string, isFollowing: boolean) => void;
 };
 
 const FollowContext = createContext<FollowContextType>({
@@ -13,10 +13,10 @@ const FollowContext = createContext<FollowContextType>({
 export function FollowProvider({ children }: { children: React.ReactNode }) {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
-  const toggleFollow = (userId: string, isFollowing: boolean) => {
+  const toggleFollow = (username: string, isFollowing: boolean) => {
     setFollowingIds((prev) => {
       const newSet = new Set(prev);
-      isFollowing ? newSet.delete(userId) : newSet.add(userId);
+      isFollowing ? newSet.delete(username) : newSet.add(username);
       return newSet;
     });
   };

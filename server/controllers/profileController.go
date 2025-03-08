@@ -6,7 +6,6 @@ import (
 	"main/models"
 	"main/services/user"
 	"net/http"
-	"strconv"
 )
 
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
@@ -26,6 +25,7 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		profile.Username = currentUser.Username
+		profile.CreatedAt = currentUser.CreatedAt.String()
 		if currentUser.Location != nil {
 			profile.Location = *currentUser.Location
 		}
@@ -88,11 +88,11 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 
 func IsAlreadyFollowingHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		followedID, _ := strconv.Atoi(c.Param("userid"))
-		userID, _ := c.Get("userID")
-		currentUserID, _ := userID.(uint)
+		followedUsername := c.Param("username")
+		usernameAux, _ := c.Get("username")
+		username, _ := usernameAux.(string)
 
-		isFollowing, isFollowingErr := user.IsFollowing(db, uint(followedID), currentUserID)
+		isFollowing, isFollowingErr := user.IsFollowing(db, followedUsername, username)
 		if isFollowingErr != nil {
 			c.JSON(http.StatusOK, gin.H{"message": "Check Following successfully", "isFollowing": isFollowing})
 			return

@@ -8,7 +8,7 @@ interface UserListProps {
 
 export function UserList({ users, emptyMessage, className }: UserListProps) {
   // Agregar validación adicional
-  const validUsers = users?.filter((user) => user?.id && user?.username) || [];
+  const validUsers = users?.filter((user) => user?.username) || [];
 
   if (validUsers.length === 0) {
     return (
@@ -22,7 +22,7 @@ export function UserList({ users, emptyMessage, className }: UserListProps) {
     <div className={`${className}`}>
       {validUsers.map((user) => (
         <FollowCard
-          key={user.id}
+          key={user.username}
           {...user}
           nickname={user.nickname || user.displayName || user.username}
         />

@@ -21,7 +21,7 @@ function ExplorePage() {
       let fetchedPosts = null;
 
       fetchedPosts = await getSearchedPosts(keyword, order);
-
+      console.log(fetchedPosts);
       setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
     } catch (error) {
       console.error("Error fetching posts:", error);

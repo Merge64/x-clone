@@ -281,9 +281,9 @@ function ensurePostsFormat(data: any): any[] {
   return [];
 }
 
-export async function FollowUser(userID: string) {
+export async function FollowUser(username: string) {
   try {
-    const response = await fetch(`http://localhost:8080/api/profile/follow/${userID}`, {
+    const response = await fetch(`http://localhost:8080/api/profile/follow/${username}`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -298,9 +298,9 @@ export async function FollowUser(userID: string) {
   }
 }
 
-export async function UnfollowUser(userID: string) {
+export async function UnfollowUser(username: string) {
   try {
-    const response = await fetch(`http://localhost:8080/api/profile/unfollow/${userID}`, {
+    const response = await fetch(`http://localhost:8080/api/profile/unfollow/${username}`, {
       method: 'DELETE',
       credentials: 'include',
     });
@@ -315,9 +315,9 @@ export async function UnfollowUser(userID: string) {
 }
 
 
-export async function IsAlreadyFollowing(userID: string): Promise<boolean> {
+export async function IsAlreadyFollowing(username: string): Promise<boolean> {
   try {
-    const response = await fetch(`http://localhost:8080/api/profile/is-following/${userID}`, {
+    const response = await fetch(`http://localhost:8080/api/profile/is-following/${username}`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -424,7 +424,7 @@ export async function createPost(body: string): Promise<any> {
 
 export async function getPostsByUsername(username: string): Promise<any> {
   try {
-    const response = await fetch(`'http://localhost:8080/api/posts/user/${username}'`, {
+    const response = await fetch(`http://localhost:8080/api/posts/user/${username}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

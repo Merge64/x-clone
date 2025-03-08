@@ -318,7 +318,7 @@ func GetCommentsHandler(db *gorm.DB) gin.HandlerFunc {
 
 		var comments []models.Post
 		// Preload ParentPost to include it in the processing
-		result := db.Preload("ParentPost").Where("pa	rent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
+		result := db.Preload("ParentPost").Where("parent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
 			return

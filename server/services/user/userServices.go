@@ -13,19 +13,19 @@ import (
 	"regexp"
 )
 
-func FollowAccount(db *gorm.DB, followingID, followedUserID uint) error {
+func FollowAccount(db *gorm.DB, followingUsername, followedUsername string) error {
 	// 1. Check if the user is already following
 	var existing models.Follow
-	if err := db.Where("following_user_id = ? AND followed_user_id = ?",
-		followingID, followedUserID).
+	if err := db.Where("following_username = ? AND followed_username = ?",
+		followingUsername, followedUsername).
 		First(&existing).Error; err == nil {
 		return errors.New("already following this user")
 	}
 
 	// 2. Create a new Follow record
 	follow := models.Follow{
-		FollowingUserID: followingID,
-		FollowedUserID:  followedUserID,
+		FollowingUsername: followingUsername,
+		FollowedUsername:  followedUsername,
 	}
 	if err := db.Create(&follow).Error; err != nil {
 		return err // This error triggers "Failed to follow user"
@@ -34,12 +34,12 @@ func FollowAccount(db *gorm.DB, followingID, followedUserID uint) error {
 	return nil
 }
 
-func UnfollowAccount(db *gorm.DB, followingUserID, followedUserID uint) error {
-	if followingUserID == followedUserID {
+func UnfollowAccount(db *gorm.DB, followingUsername, followedUsername string) error {
+	if followingUsername == followedUsername {
 		return errors.New("invalid ID: user cannot unfollow themselves")
 	}
 
-	result := db.Where("following_user_id = ? AND followed_user_id = ?", followingUserID, followedUserID).
+	result := db.Where("following_username = ? AND followed_username = ?", followingUsername, followedUsername).
 		Delete(&models.Follow{})
 
 	if result.Error != nil {
@@ -150,7 +150,7 @@ func SearchUsersByUsername(db *gorm.DB, username string) ([]mappers.Response, er
             COUNT(follows.id) AS follower_count,
             CASE WHEN LOWER(users.username) = LOWER(?) THEN 0 ELSE 1 END AS priority
         `, username).
-		Joins("LEFT JOIN follows ON follows.followed_user_id = users.id").
+		Joins("LEFT JOIN follows ON follows.followed_username = users.username").
 		Where("users.username ILIKE ?", "%"+username+"%").
 		Group("users.id, users.nickname, users.username, users.mail, users.password, users.location, priority").
 		Order("priority ASC, follower_count DESC").
@@ -320,8 +320,8 @@ func GetFollowers(db *gorm.DB, username string) ([]models.User, error) {
 
 	result := db.Table("users").
 		Select("users.*").
-		Joins("JOIN follows ON users.id = follows.following_user_id").
-		Where("followed_user_id = ?", currentUser.ID).
+		Joins("JOIN follows ON users.id = follows.following_username").
+		Where("followed_username = ?", currentUser.Username).
 		Find(&followers)
 
 	if result.Error != nil {
@@ -380,8 +380,8 @@ func GetFollowing(db *gorm.DB, username string) ([]models.User, error) {
 
 	result := db.Table("users").
 		Select("users.*").
-		Joins("JOIN follows ON users.id = follows.followed_user_id").
-		Where("following_user_id = ?", currentUser.ID).
+		Joins("JOIN follows ON users.id = follows.followed_username").
+		Where("following_username = ?", currentUser.Username).
 		Find(&following)
 
 	if result.Error != nil {
@@ -503,9 +503,9 @@ func EnlistUsers(arrayOfUsers []models.User) []string {
 	return usersList
 }
 
-func IsFollowing(db *gorm.DB, followedID uint, currentUserID uint) (bool, error) {
+func IsFollowing(db *gorm.DB, followedUsername, currentUsername string) (bool, error) {
 	var follow models.Follow
-	db.Where("following_user_id = ? AND followed_user_id = ?", currentUserID, followedID).First(&follow)
+	db.Where("following_username = ? AND followed_username = ?", currentUsername, followedUsername).First(&follow)
 
 	if follow.ID == 0 {
 		return false, errors.New("not following user")

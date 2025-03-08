@@ -7,12 +7,12 @@ export function FollowCard(user: UserInfo) {
 
   useEffect(() => {
     async function checkFollowingStatus() {
-      const stateIsFollowing = await IsAlreadyFollowing(String(user.id));
+      const stateIsFollowing = await IsAlreadyFollowing(user.username);
       setIsFollowing(stateIsFollowing);
     }
 
     checkFollowingStatus();
-  }, [user.id]);
+  }, [user.username]);
 
   if (isFollowing === null) {
     return <p>Loading...</p>;
@@ -23,11 +23,8 @@ export function FollowCard(user: UserInfo) {
 
   const handleButton = () => {
     setIsFollowing(!isFollowing);
-    selectedAction(String(user.id));
+    selectedAction(user.username);
   };
-
-
-  
 
   return (
     <div className="flex items-center justify-between w-full p-3 hover:bg-gray-800/50 transition-colors rounded-xl">

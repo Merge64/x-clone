@@ -130,19 +130,19 @@ var SendDirectMessageEndpoint = models.Endpoint{
 
 var FollowUserEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLProfile + "/follow/:userid",
+	Path:            constants.InitialURLProfile + "/follow/:username",
 	HandlerFunction: FollowUserHandler,
 }
 
 var UnfollowUserEndpoint = models.Endpoint{
 	Method:          models.DELETE,
-	Path:            constants.InitialURLProfile + "/unfollow/:userid",
+	Path:            constants.InitialURLProfile + "/unfollow/:username",
 	HandlerFunction: UnfollowUserHandler,
 }
 
 var IsAlreadyFollowingEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLProfile + "/is-following/:userid",
+	Path:            constants.InitialURLProfile + "/is-following/:username",
 	HandlerFunction: IsAlreadyFollowingHandler,
 }
 

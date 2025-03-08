@@ -318,7 +318,7 @@ func GetCommentsHandler(db *gorm.DB) gin.HandlerFunc {
 
 		var comments []models.Post
 		// Preload ParentPost to include it in the processing
-		result := db.Preload("ParentPost").Where("parent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
+		result := db.Preload("ParentPost").Where("pa	rent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
 			return
@@ -684,7 +684,7 @@ func editPost(c *gin.Context, db *gorm.DB, postID int) PostError {
 	}
 
 	// Fetch the post to edit
-	post, getPostErr := user.GetPostByID(db, uint(postID))
+	post, getPostErr := user.GetSimplePostByID(db, uint(postID))
 	if getPostErr != nil {
 		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
 			return PostError{Message: gin.H{"error": constants.ErrNoPost},
@@ -732,7 +732,7 @@ func deletePost(db *gorm.DB, currentUserID uint, postID int) PostError {
 			Status: http.StatusUnauthorized}
 	}
 
-	post, getPostErr := user.GetPostByID(db, uint(postID))
+	post, getPostErr := user.GetSimplePostByID(db, uint(postID))
 	if getPostErr != nil {
 		if errors.Is(getPostErr, gorm.ErrRecordNotFound) {
 			return PostError{Message: gin.H{"error": constants.ErrNoPost}, Status: http.StatusNotFound}

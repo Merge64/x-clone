@@ -1,9 +1,9 @@
 export interface PostData {
-    id: number | string;
+    id: number;
     created_at: string;
-    userid?: string | number;
+    userid: string | number;
     username: string;
-    nickname?: string;
+    nickname: string;
     body: string;
     is_repost?: boolean;
     parent_id?: string | number;
@@ -24,7 +24,3 @@ export interface PostData {
   export type Post = PostData;
   export type Comment = CommentData;
   
-  export interface User {
-    username: string;
-    nickname?: string;
-  }

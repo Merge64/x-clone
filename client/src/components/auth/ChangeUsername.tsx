@@ -202,12 +202,12 @@ return (
       </div>
     </div>
     
-    {/* Status message area with fixed height to prevent layout shifts */}
+    {/* Status message area with fixed height to prevent Navbar shifts */}
     <div className="h-6 mb-4">
       {statusMessage && <p className={statusColor}>{statusMessage}</p>}
     </div>
     
-    {/* Fixed height container for Next button to prevent layout shifts */}
+    {/* Fixed height container for Next button to prevent Navbar shifts */}
     <div className="h-14 mb-3">
       {/* Next button - only visible when username is different from original */}
       {!isSameAsOriginal && (

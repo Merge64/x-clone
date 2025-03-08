@@ -1,4 +1,4 @@
-import { FollowCard } from "../FollowCard";
+import { FollowCard } from "./FollowCard";
 
 interface UserListProps {
   users: any[];

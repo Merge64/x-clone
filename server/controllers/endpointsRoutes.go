@@ -70,13 +70,13 @@ var CreateRepostEndpoint = models.Endpoint{
 
 var GetAllPostsByUserIDEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLPosts + "/:username",
+	Path:            constants.InitialURLPosts + "/user/:username",
 	HandlerFunction: GetPostsByUsernameHandler,
 }
 
 var GetSpecificPostEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLPosts + "/:username/:postid",
+	Path:            constants.InitialURLPosts + "/:postid",
 	HandlerFunction: GetSpecificPostHandler,
 }
 

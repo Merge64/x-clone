@@ -161,8 +161,6 @@ export async function getCommentsCount(postId: number): Promise<any> {
   }
 }
 
-
-
 export async function getComments(postId: number): Promise<any[]> {
   try {
     const response = await fetch(`http://localhost:8080/api/posts/comments/${postId}`, {
@@ -426,7 +424,7 @@ export async function createPost(body: string): Promise<any> {
 
 export async function getPostsByUsername(username: string): Promise<any> {
   try {
-    const response = await fetch(`'http://localhost:8080/api/posts/${username}'`, {
+    const response = await fetch(`'http://localhost:8080/api/posts/user/${username}'`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -441,9 +439,9 @@ export async function getPostsByUsername(username: string): Promise<any> {
   }
 }
 
-export const getPostById = async (username: string, postId: string): Promise<PostData | null> => {
+export const getPostById = async ( postId: string): Promise<PostData | null> => {
   try {
-    const response = await fetch(`http://localhost:8080/api/posts/${username}/${postId}`);
+    const response = await fetch(`http://localhost:8080/api/posts/${postId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch post');
     }
@@ -453,6 +451,7 @@ export const getPostById = async (username: string, postId: string): Promise<Pos
     return {
       id: postData.id,
       created_at: postData.created_at,
+      userid: postData.userid,
       username: postData.username,
       nickname: postData.nickname || '',
       body: postData.body || postData.quote || '',

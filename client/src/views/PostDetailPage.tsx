@@ -22,12 +22,13 @@ import PostOptions from '../components/posts/PostOptions';
 import CommentModal from '../components/posts/CommentModal';
 import QuoteModal from '../components/posts/QuoteModal';
 import PostContent from '../components/posts/PostContent';
-import Layout from './Layout';
+import Navbar from './navbar/Navbar';
 import Post from '../components/posts/Post';
 
 const defaultPost: PostData = {
     id: 0,
     created_at: new Date().toISOString(),
+    userid: 0,
     username: '',
     nickname: '',
     body: '',
@@ -38,6 +39,7 @@ const defaultPost: PostData = {
     parent_id: undefined,
     quote: '',
     parent_post: undefined,
+
 };
 
 function PostDetailPage() {
@@ -122,49 +124,50 @@ function PostDetailPage() {
 
     useEffect(() => {
         const fetchCommentsCount = async () => {
-            if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
-                try {
-                    const count = await getCommentsCount(Number(post.parent_post?.id));
-                    setCommentsCount(count);
-                } catch (error) {
-                    console.error('Error fetching comments count:', error);
-                }
-            } else {
-                try {
-                    const count = await getCommentsCount(Number(post.id));
-                    setCommentsCount(count);
-                } catch (error) {
-                    console.error('Error fetching comments count:', error);
-                }
+          // Simplified condition
+          if (post.is_repost && !post.quote) {
+            try {
+              const count = await getCommentsCount(Number(post.parent_id));
+              setCommentsCount(count);
+            } catch (error) {
+              console.error('Error fetching comments count:', error);
             }
+          } else {
+            try {
+              const count = await getCommentsCount(Number(post.id));
+              setCommentsCount(count);
+            } catch (error) {
+              console.error('Error fetching comments count:', error);
+            }
+          }
         };
-
+      
         fetchCommentsCount();
-    }, [post.is_repost, post.parent_id, post.id, post.parent_post?.id]);
+      }, [post.is_repost, post.parent_id, post.id]); // parent_id instead of parent_post.id
 
     useEffect(() => {
         const fetchComments = async () => {
-            if (!post.id) return;
-            
-            setLoadingComments(true);
-            try {
-                // If it's a simple repost (no quote), fetch comments for the parent post
-                if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
-                    const fetchedComments = await getComments(Number(post.parent_post?.id));
-                    setComments(fetchedComments);
-                } else {
-                    const fetchedComments = await getComments(Number(post.id));
-                    setComments(fetchedComments);
-                }
-            } catch (error) {
-                console.error('Error fetching comments:', error);
-            } finally {
-                setLoadingComments(false);
+          if (!post.id) return;
+          
+          setLoadingComments(true);
+          try {
+            // Use parent_id for simple reposts
+            if (post.is_repost && !post.quote) {
+              const fetchedComments = await getComments(Number(post.parent_id));
+              setComments(fetchedComments);
+            } else {
+              const fetchedComments = await getComments(Number(post.id));
+              setComments(fetchedComments);
             }
+          } catch (error) {
+            console.error('Error fetching comments:', error);
+          } finally {
+            setLoadingComments(false);
+          }
         };
-    
+      
         fetchComments();
-    }, [post.id, post.is_repost, post.parent_post?.id]);
+      }, [post.id, post.is_repost, post.parent_id]); // Use parent_id in dependency array
 
     useEffect(() => {
         const checkInteractions = async () => {
@@ -211,20 +214,18 @@ function PostDetailPage() {
         };
     }, [showRepostOptions]);
 
-    const handleCommentAdded = async () => {
-        setCommentsCount(prev => prev + 1);
-        
+    const handleCommentAdded = async () => { 
         if (post.id) {
-            // If it's a simple repost (no quote), fetch comments for the parent post
-            if (post.is_repost && (post.quote === null || post.quote === undefined || post.quote === "")) {
-                const fetchedComments = await getComments(Number(post.parent_post?.id));
-                setComments(fetchedComments);
-            } else {
-                const fetchedComments = await getComments(Number(post.id));
-                setComments(fetchedComments);
-            }
+          // Always fetch from parent_id for simple reposts
+          if (post.is_repost && !post.quote) {
+            const fetchedComments = await getComments(Number(post.parent_id));
+            setComments(fetchedComments);
+          } else {
+            const fetchedComments = await getComments(Number(post.id));
+            setComments(fetchedComments);
+          }
         }
-    };
+      };
 
     const formatDate = (isoString: string | number | Date) => {
         const date = new Date(isoString);
@@ -248,7 +249,7 @@ function PostDetailPage() {
             }
 
             try {
-                const postData = await getPostById(username, postId);
+                const postData = await getPostById(postId);
                 if (!postData) {
                     setError('Post not found');
                     return;
@@ -313,20 +314,25 @@ function PostDetailPage() {
 
     const submitComment = async () => {
         if (!newComment.trim() || isAddingComment) return;
-
+      
         setIsAddingComment(true);
         try {
-            await addComment(Number(post.id), newComment);
-            setCommentsCount(prev => prev + 1);
-            setNewComment('');
-            await handleCommentAdded();
+          // Submit to parent post if it's a simple repost
+          const targetPostId = post.is_repost && !post.quote 
+            ? Number(post.parent_id) 
+            : Number(post.id);
+          
+          await addComment(targetPostId, newComment);
+          setCommentsCount(prev => prev + 1);
+          setNewComment('');
+          await handleCommentAdded();
         } catch (error) {
-            console.error('Error adding comment:', error);
-            alert('Failed to post comment. Please try again.');
+          console.error('Error adding comment:', error);
+          alert('Failed to post comment. Please try again.');
         } finally {
-            setIsAddingComment(false);
+          setIsAddingComment(false);
         }
-    };
+      };
 
     const handleSaveEdit = async () => {
         if (!editContent.trim()) {
@@ -538,29 +544,29 @@ function PostDetailPage() {
 
     if (loading) {
         return (
-            <Layout>
+            <Navbar>
                 <div className="flex items-center justify-center min-h-[200px]">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
-            </Layout>
+            </Navbar>
         );
     }
 
     if (error) {
         return (
-            <Layout>
+            <Navbar>
                 <div className="flex items-center justify-center min-h-[200px]">
                     <div className="text-center">
                         <h2 className="text-xl font-bold mb-2">Error</h2>
                         <p className="text-gray-400">{error}</p>
                     </div>
                 </div>
-            </Layout>
+            </Navbar>
         );
     }
 
     return (
-        <Layout>
+        <Navbar>
             <div>
                 <header className="sticky top-0 bg-black/80 backdrop-blur-sm p-4 flex items-center gap-6 border-b border-gray-800">
                     <button onClick={() => navigate(-1)} className="hover:bg-gray-800 p-2 rounded-full">
@@ -576,7 +582,7 @@ function PostDetailPage() {
                             post={post.parent_post}
                             onRepost={async () => {
                                 if (username && postId) {
-                                    const updatedPost = await getPostById(username, postId);
+                                    const updatedPost = await getPostById(postId);
                                     if (updatedPost) {
                                         setPost(updatedPost);
                                     }
@@ -792,7 +798,7 @@ function PostDetailPage() {
                     />
                 )}
             </div>
-        </Layout>
+        </Navbar>
     );
 }
 

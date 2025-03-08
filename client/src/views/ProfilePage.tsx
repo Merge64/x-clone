@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
-import Layout from './Layout';
+import Navbar from './navbar/Navbar';
 import PostList from '../components/posts/PostList';
 import { getPostsByUsername, getUserInfo, getUserProfile } from '../utils/api';
 
@@ -66,17 +66,17 @@ function ProfilePage() {
 
   if (isLoading) {
     return (
-      <Layout>
+      <Navbar>
         <div className="flex justify-center p-6">
           <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
         </div>
-      </Layout>
+      </Navbar>
     );
   }
 
   if (notFound) {
     return (
-      <Layout>
+      <Navbar>
         <div className="flex flex-col items-center justify-center p-8 text-center mt-16">
           <p className="text-gray-500 mb-6">Hmm...this page doesn't exist. Try searching for something else.</p>
           
@@ -88,13 +88,13 @@ function ProfilePage() {
             </Link>
           </div>
         </div>
-      </Layout>
+      </Navbar>
     );
   }
 
   if (error && !notFound) {
     return (
-      <Layout>
+      <Navbar>
         <div className="p-6 text-center text-red-500">
           <p>{error}</p>
           <button 
@@ -104,13 +104,13 @@ function ProfilePage() {
             Try Again
           </button>
         </div>
-      </Layout>
+      </Navbar>
     );
   }
 
   return (
-    <Layout>
-      <div className="border-b border-gray-800">
+    <Navbar>
+      <div className="border-b border-gray-800">                         
         <div className="p-4 flex items-center">
           <Link to="/home" className="mr-4">
             <ArrowLeft size={20} />
@@ -221,7 +221,7 @@ function ProfilePage() {
             : `No ${activeTab} to display`
         }
       />
-    </Layout>
+    </Navbar>
   );
 }
 

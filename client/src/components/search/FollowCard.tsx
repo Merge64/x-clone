@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { FollowUser, IsAlreadyFollowing, UnfollowUser } from "../utils/api";
-import { UserInfo } from "./user/UserLayout";
+import { FollowUser, IsAlreadyFollowing, UnfollowUser } from "../../utils/api";
+import { UserInfo } from "../../types/UserInter";
 
 export function FollowCard(user: UserInfo) {
   const [isFollowing, setIsFollowing] = useState<boolean | null>(null); // Estado inicial indefinido
@@ -25,6 +25,9 @@ export function FollowCard(user: UserInfo) {
     setIsFollowing(!isFollowing);
     selectedAction(String(user.id));
   };
+
+
+  
 
   return (
     <div className="flex items-center justify-between w-full p-3 hover:bg-gray-800/50 transition-colors rounded-xl">

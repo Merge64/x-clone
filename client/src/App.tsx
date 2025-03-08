@@ -1,13 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginSignupPage from './views/LoginSignupPage';
-import LoginModal from './components/LoginModal';
-import ChangeUsername from './components/ChangeUsername';
-import HomePage from './views/HomePage';
-import AuthChecker from './utils/AuthChecker';
-import SignupModal from './components/SignupModal';
+import LoginSignupPage from './views/signuplogin/LoginSignupPage';
+import LoginModal from './components/auth/LoginModal';
+import HomePage from './components/feed/HomePage';
+import AuthChecker from './components/auth/AuthChecker';
+import SignupModal from './components/auth/SignupModal';
 import ProfilePage from './views/ProfilePage';
 import PostDetailPage from './views/PostDetailPage';
-import UsernamePopup from "./components/UsernamePopup";
+import UsernamePopup from "./components/feed/ChangeUsernamePopup";
 import ExplorePage from "./views/ExplorePage";
 
 function App() {
@@ -54,7 +53,7 @@ function App() {
           } />
 
         <Route 
-          path="/post/:username/:postId" 
+          path="/:username/status/:postId" 
           element={
             <AuthChecker>
               <PostDetailPage />

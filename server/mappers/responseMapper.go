@@ -5,6 +5,7 @@ import "main/models"
 type Response struct {
 	ID            uint   `json:"id"`
 	Username      string `json:"username"`
+	Nickname      string `json:"nickname"`
 	FollowerCount uint   `json:"follower_count"`
 }
 
@@ -12,6 +13,7 @@ type Response struct {
 func MapUserToResponse(u models.User) Response {
 	return Response{
 		ID:            u.ID,
+		Nickname:      u.Nickname,
 		Username:      u.Username,
 		FollowerCount: u.FollowerCount,
 	}

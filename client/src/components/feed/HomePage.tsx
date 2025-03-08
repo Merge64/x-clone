@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getAllPosts } from '../../utils/api';
-import Layout from '../../views/Layout';
+import Navbar from '../../views/navbar/Navbar';
 import CreatePost from '../posts/CreatePost';
 import PostList from '../posts/PostList';
-import UsernamePopup from './UsernamePopup';
+import UsernamePopup from './ChangeUsernamePopup';
 
 function HomePage() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -43,7 +43,7 @@ function HomePage() {
 
   return (
     <>
-      <Layout>
+      <Navbar>
         <div className="border-b border-gray-800">
           <div className="flex">
             <button
@@ -96,7 +96,7 @@ function HomePage() {
             }
           />
         )}
-      </Layout>
+      </Navbar>
 
       {/* Username Popup */}
       <UsernamePopup 

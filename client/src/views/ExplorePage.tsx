@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { getSearchedPosts } from "../utils/api";
-import Layout from "../components/Layout";
+import Navbar from "./navbar/Navbar";
 import PostList from "../components/posts/PostList";
 import { Search } from "lucide-react";
-import { UserList } from "../components/user/UserList";
+import { UserList } from "../components/search/UserList";
 
 function ExplorePage() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -54,7 +54,7 @@ function ExplorePage() {
   };
 
   return (
-    <Layout>
+    <Navbar>
       {/* Search Bar */}
       <div className="sticky top-0 z-10 bg-black bg-opacity-90 backdrop-blur-sm border-b border-gray-800 px-4 py-2">
         <form onSubmit={handleSearch} className="relative">
@@ -150,7 +150,7 @@ function ExplorePage() {
           }
         />
       )}
-    </Layout>
+    </Navbar>
   );
 }
 

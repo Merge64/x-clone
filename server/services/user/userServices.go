@@ -91,7 +91,7 @@ func ToggleLike(db *gorm.DB, userID uint, postID uint) (ToggleInfo, error) {
 }
 
 // searchPostsByKeywords is a helper.
-func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post, error) {
+func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]mappers.PostResponse, error) {
 	var posts []models.Post
 	var result *gorm.DB
 
@@ -124,14 +124,16 @@ func searchPostsByKeywords(db *gorm.DB, keyword, orderBy string) ([]models.Post,
 		return nil, fmt.Errorf(constants.ErrNoPost+" keyword used: %s", keyword)
 	}
 
-	return posts, nil
+	processedPosts := ProcessPosts(posts)
+
+	return processedPosts, nil
 }
 
-func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]models.Post, error) {
+func SearchPostsByKeywords(db *gorm.DB, keyword string) ([]mappers.PostResponse, error) {
 	return searchPostsByKeywords(db, keyword, "likes_count DESC")
 }
 
-func SearchPostsByKeywordsSortedByLatest(db *gorm.DB, keyword string) ([]models.Post, error) {
+func SearchPostsByKeywordsSortedByLatest(db *gorm.DB, keyword string) ([]mappers.PostResponse, error) {
 	return searchPostsByKeywords(db, keyword, "created_at DESC")
 }
 
@@ -287,7 +289,7 @@ func GetUserByUsername(db *gorm.DB, username string) (models.User, error) {
 	return user, nil
 }
 
-func GetPostByID(db *gorm.DB, postID uint) (models.Post, error) {
+func GetSimplePostByID(db *gorm.DB, postID uint) (models.Post, error) {
 	var post models.Post
 	err := db.First(&post, postID).Error
 	if err != nil {

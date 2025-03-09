@@ -6,46 +6,63 @@ import (
 	"main/models"
 	"main/services/user"
 	"net/http"
-	"strconv"
 )
 
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")
-		var profile struct {
-			// NameTag   string
-			Username  string
-			Location  string
-			CreatedAt string
-		}
 
-		currentUser, getUserErr := user.GetUserByUsername(db, username)
-		if getUserErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": getUserErr.Error()})
+		var u models.User
+		if err := db.Where("username = ?", username).First(&u).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 
-		profile.Username = currentUser.Username
-		if currentUser.Location != nil {
-			profile.Location = *currentUser.Location
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "View Account successfully", "profile": profile})
+		// Fetch follower and following counts
+		var followerCount int64
+		db.Model(&models.Follow{}).Where("followed_username = ?", username).Count(&followerCount)
+
+		var followingCount int64
+		db.Model(&models.Follow{}).Where("following_username = ?", username).Count(&followingCount)
+
+		// Return profile data with counts
+		c.JSON(http.StatusOK, gin.H{
+			"profile": gin.H{
+				"username":        u.Username,
+				"nickname":        u.Nickname,
+				"mail":            u.Mail,
+				"location":        u.Location,
+				"bio":             u.Bio,
+				"follower_count":  followerCount,
+				"following_count": followingCount,
+				"created_at":      u.CreatedAt, // Include the CreatedAt field
+			},
+		})
 	}
 }
 
 func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, _ := c.Get("userID")
-		profileID, _ := userID.(uint)
+		usernameAux, _ := c.Get("username")
+		nicknameAux, _ := c.Get("nickname")
+		nickname, _ := nicknameAux.(string)
+		username, _ := usernameAux.(string)
 
 		var currentUser models.User
-		currentUser.ID = profileID
 		if decodeErr := c.ShouldBindJSON(&currentUser); decodeErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user data"})
 			return
 		}
 
-		if updateProfileErr := user.UpdateProfile(db, &currentUser); updateProfileErr != nil {
+		if currentUser.Nickname != nickname {
+			updateErr := user.UpdateNicknamePosts(db, username, currentUser.Nickname)
+			if updateErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": updateErr.Error()})
+				return
+			}
+		}
+
+		if updateProfileErr := user.UpdateProfile(db, username, &currentUser); updateProfileErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": updateProfileErr.Error()})
 			return
 		}
@@ -64,9 +81,12 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listFollowers := user.EnlistUsers(followers)
+		followerCount := len(followers)
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Followers Profile successfully", "followers": listFollowers})
+		c.JSON(http.StatusOK, gin.H{
+			"users":           followers,
+			"following_count": followerCount,
+		})
 	}
 }
 
@@ -80,19 +100,22 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		listFollowing := user.EnlistUsers(following)
+		followingCount := len(following)
 
-		c.JSON(http.StatusOK, gin.H{"message": "View Profile Following successfully", "following": listFollowing})
+		c.JSON(http.StatusOK, gin.H{
+			"users":           following,
+			"following_count": followingCount,
+		})
 	}
 }
 
 func IsAlreadyFollowingHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		followedID, _ := strconv.Atoi(c.Param("userid"))
-		userID, _ := c.Get("userID")
-		currentUserID, _ := userID.(uint)
+		followedUsername := c.Param("username")
+		usernameAux, _ := c.Get("username")
+		username, _ := usernameAux.(string)
 
-		isFollowing, isFollowingErr := user.IsFollowing(db, uint(followedID), currentUserID)
+		isFollowing, isFollowingErr := user.IsFollowing(db, followedUsername, username)
 		if isFollowingErr != nil {
 			c.JSON(http.StatusOK, gin.H{"message": "Check Following successfully", "isFollowing": isFollowing})
 			return

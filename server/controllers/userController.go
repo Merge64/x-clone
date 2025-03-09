@@ -109,28 +109,25 @@ func ListConversationsHandler(db *gorm.DB) gin.HandlerFunc {
 // Aux
 
 func toggleFollow(db *gorm.DB, c *gin.Context, isFollowing bool) {
-	userID, _ := c.Get("userID")
-	followingID, _ := userID.(uint)
+	followingUsernameAux, _ := c.Get("username")
+	followingUsername, _ := followingUsernameAux.(string)
+
 	var (
 		successMessage  string
 		logErrorMessage string
 		expr            string
 	)
 
-	followedUserID, atoiErr := strconv.Atoi(c.Param("userid"))
-	if atoiErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
+	followedUsername := c.Param("username")
 
 	if isFollowing {
-		if followErr := user.FollowAccount(db, followingID, uint(followedUserID)); followErr != nil {
+		if followErr := user.FollowAccount(db, followingUsername, followedUsername); followErr != nil {
 			log.Println("Follow error:", followErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to follow user"})
 			return
 		}
 	} else {
-		if unfollowErr := user.UnfollowAccount(db, followingID, uint(followedUserID)); unfollowErr != nil {
+		if unfollowErr := user.UnfollowAccount(db, followingUsername, followedUsername); unfollowErr != nil {
 			log.Println("Unfollow error:", unfollowErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unfollow user"})
 			return
@@ -148,7 +145,7 @@ func toggleFollow(db *gorm.DB, c *gin.Context, isFollowing bool) {
 	}
 
 	if err := db.Model(&models.User{}).
-		Where("id = ?", followedUserID).
+		Where("username = ?", followedUsername).
 		UpdateColumn("follower_count", gorm.Expr("follower_count "+expr+" 1")).Error; err != nil {
 		log.Println("Failed to "+logErrorMessage+" follower_count:", err)
 	}

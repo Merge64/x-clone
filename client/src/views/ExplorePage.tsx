@@ -19,9 +19,7 @@ function ExplorePage() {
 
     try {
       let fetchedPosts = null;
-
       fetchedPosts = await getSearchedPosts(keyword, order);
-
       setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -141,14 +139,11 @@ function ExplorePage() {
         )
       ) : (
         <PostList
-          posts={posts}
-          onRepost={fetchPosts}
-          emptyMessage={
-            activeTab === "for-you"
-              ? "No posts to display. Be the first to post something!"
-              : "You're not following anyone yet, or they haven't posted."
-          }
-        />
+                posts={posts}
+                onRepost={fetchPosts}
+                emptyMessage={activeTab === "for-you"
+                  ? "No posts to display. Be the first to post something!"
+                  : "You're not following anyone yet, or they haven't posted."} isLoading={false}        />
       )}
     </Navbar>
   );

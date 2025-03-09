@@ -22,7 +22,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
 }) => {
   const [newComment, setNewComment] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
-  
+
   const MAX_CHARS = 280;
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -36,28 +36,16 @@ const CommentModal: React.FC<CommentModalProps> = ({
     if (!newComment.trim() || isAddingComment) return;
 
     setIsAddingComment(true);
-    if (post.is_repost && (post.quote == null || post.quote == undefined || post.quote == "")) {
-      try {
-        await addComment(Number(post.parent_id), newComment);
-        setNewComment('');
-        onCommentAdded();
-        onClose(); // Close the modal after successful comment
-      } catch (error) {
-        console.error('Error adding comment:', error);
-      } finally {
-        setIsAddingComment(false);
-      }
-    } else{
-      try {
-        await addComment(Number(post.id), newComment);
-        setNewComment('');
-        onCommentAdded();
-        onClose(); // Close the modal after successful comment
-      } catch (error) {
-        console.error('Error adding comment:', error);
-      } finally {
-        setIsAddingComment(false);
-      }
+    try {
+      const targetPostId = post.is_repost && !post.quote ? post.parent_id : post.id;
+      await addComment(Number(targetPostId), newComment);
+      setNewComment('');
+      onCommentAdded();
+      onClose();
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    } finally {
+      setIsAddingComment(false);
     }
   };
 
@@ -65,8 +53,14 @@ const CommentModal: React.FC<CommentModalProps> = ({
   const postContent = post.is_repost && post.quote ? post.quote : post.body;
 
   return (
-    <div className="fixed inset-0 bg-[#242D34]/60 flex items-start justify-center z-50 p-4 pt-64 overflow-y-auto">
-      <div className="bg-black w-full max-w-lg rounded-xl border border-gray-800 shadow-xl">
+    <div 
+      className="fixed inset-0 bg-[#242D34]/60 flex items-start justify-center z-50 p-4 pt-64 overflow-y-auto"
+      onClick={onClose} // This handles clicking on the overlay
+    >
+      <div 
+        className="bg-black w-full max-w-lg rounded-xl border border-gray-800 shadow-xl"
+        onClick={(e) => e.stopPropagation()} // Prevent click propagation inside modal
+      >
         <div className="flex items-center p-3">
           <button
             onClick={onClose}
@@ -83,7 +77,6 @@ const CommentModal: React.FC<CommentModalProps> = ({
               <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-lg font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </div>
-              {/* This is the vertical connector line */}
               <div className="w-0.5 bg-gray-700 h-full mt-2 mb-2"></div>
             </div>
 
@@ -101,7 +94,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
               <div className="mt-3 text-gray-500">
                 <span>Replying to </span>
                 <span className="text-[#1D9BF0] hover:underline">
-                <a href={`/${post.username}`}>@{post.username}</a>
+                  <a href={`/${post.username}`}>@{post.username}</a>
                 </span>
               </div>
             </div>
@@ -111,7 +104,8 @@ const CommentModal: React.FC<CommentModalProps> = ({
         <div className="p-4">
           <div className="flex space-x-3">
             <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-lg font-bold">
-              {currentUser?.nickname?.charAt(0).toUpperCase() || currentUser?.username?.charAt(0).toUpperCase() || 'U'}
+              {currentUser?.nickname?.charAt(0).toUpperCase() || 
+               currentUser?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1">
               <textarea
@@ -150,9 +144,10 @@ const CommentModal: React.FC<CommentModalProps> = ({
 
               <button
                 onClick={submitComment}
-                className={`px-4 py-1.5 rounded-full ${!newComment.trim() || isAddingComment
-                  ? 'bg-[#787A7A] text-black cursor-not-allowed'
-                  : 'bg-[#EFF3F4] hover:bg-[#D7DBDC] text-black'
+                className={`px-4 py-1.5 rounded-full ${
+                  !newComment.trim() || isAddingComment
+                    ? 'bg-[#787A7A] text-black cursor-not-allowed'
+                    : 'bg-[#EFF3F4] hover:bg-[#D7DBDC] text-black'
                 } font-bold text-sm`}
                 disabled={!newComment.trim() || isAddingComment}
               >

@@ -32,6 +32,65 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func GetAllRepliesHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Param("username")
+
+		rawPosts, err := user.GetAllRepliesByUsername(db, username)
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, listPosts) // <- Directly return the array
+	}
+}
+
+func PostsWLikesHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Param("username")
+
+		rawPosts, err := user.PostsWLikesByUsername(db, username)
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, listPosts) // <- Directly return the array
+	}
+}
+
+func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Param("username")
+		rawPosts, errDB := user.GetAllPostsByUsername(db, username)
+
+		if errDB != nil {
+			if errors.Is(errDB, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, listPosts) //
+	}
+}
+
 func GetSpecificPostHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postID, errPostID := strconv.Atoi(c.Param("postid"))
@@ -109,26 +168,6 @@ func CreatePostHandler(db *gorm.DB) gin.HandlerFunc {
 
 		// Return response
 		c.JSON(http.StatusCreated, gin.H{"message": "Post created successfully", "post": processedPost})
-	}
-}
-
-func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		username := c.Param("username")
-		rawPosts, errDB := user.GetAllPostsByUsername(db, username)
-
-		if errDB != nil {
-			if errors.Is(errDB, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found with the given username."})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		listPosts := user.ProcessPosts(rawPosts)
-
-		c.JSON(http.StatusOK, gin.H{"posts": listPosts})
 	}
 }
 
@@ -318,7 +357,7 @@ func GetCommentsHandler(db *gorm.DB) gin.HandlerFunc {
 
 		var comments []models.Post
 		// Preload ParentPost to include it in the processing
-		result := db.Preload("ParentPost").Where("pa	rent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
+		result := db.Preload("ParentPost").Where("parent_id = ? AND is_repost = ?", uint(postID), false).Find(&comments)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
 			return

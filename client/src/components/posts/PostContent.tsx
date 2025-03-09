@@ -36,7 +36,7 @@ const PostContent: React.FC<PostContentProps> = ({
   const handleReferencedPostClick = (e: React.MouseEvent, username: string, postId: number) => {
     e.preventDefault();
     e.stopPropagation();
-    navigate(`/${username}/${postId}`);
+    navigate(`/${username}/status/${postId}`);
   };
 
   if (isEditing) {

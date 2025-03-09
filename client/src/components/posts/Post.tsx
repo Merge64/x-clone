@@ -117,7 +117,9 @@ function Post({ post, onRepost, onEdit, onDelete, disableNavigation = false }: P
   const handlePostClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
+  
+    if (showCommentModal || showQuoteModal) return;
+  
     if (!disableNavigation) {
       navigate(`/${post.username}/status/${post.id}`);
     }

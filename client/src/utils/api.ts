@@ -50,19 +50,28 @@ export async function getUserInfo(): Promise<any> {
 export async function getUserProfile(username: string): Promise<any> {
   try {
     const response = await fetch(`http://localhost:8080/api/profile/${username}`, {
-      method: 'GET',
-      credentials: 'include',
+      method: "GET",
+      credentials: "include",
     });
 
     if (!response.ok) throw new Error(`Failed to fetch profile for ${username}`);
 
     const data = await response.json();
-    return data.profile;
+
+    return {
+      username: data.profile.username,
+      nickname: data.profile.nickname,
+      location: data.profile.location || "",
+      bio: data.profile.bio || "",
+      followerCount: data.profile.follower_count || 0, 
+      followingCount: data.profile.following_count || 0, 
+    };
   } catch (error) {
     console.error(`Error fetching profile for ${username}:`, error);
     throw error;
   }
 }
+
 
 export async function updateUsername(username: string): Promise<any> {
   const response = await fetch('http://localhost:8080/api/user/update-username', {
@@ -253,10 +262,32 @@ export async function getAllPosts(): Promise<any[]> {
   }
 }
 
-export async function getSearchedPosts(keyword: string, orderBy: string) {
+export async function getSearchedPosts(keyword: string, filter: string) {
   let endpointURl = `http://localhost:8080/api/search?q=${keyword}`;
-  if (orderBy) {
-    endpointURl += `&f=${orderBy}`;
+  if (filter) {
+    endpointURl += `&f=${filter}`;
+  }
+
+  try {
+    const response = await fetch(endpointURl, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch data');
+
+    const data = await response.json();
+
+    return filter === 'user' ? data.users || data : ensurePostsFormat(data);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return [];
+  }
+}
+
+export async function getPrivateSearchedPosts(keyword: string, filter: string) {
+  let endpointURl = `http://localhost:8080/api/private/search?q=${keyword}`;
+  if (filter) {
+    endpointURl += `&f=${filter}`;
   }
   try {
     const response = await fetch(endpointURl, {
@@ -267,7 +298,7 @@ export async function getSearchedPosts(keyword: string, orderBy: string) {
 
     const data = await response.json();
 
-    return orderBy === 'user' ? data.users || data : ensurePostsFormat(data);
+    return filter === 'user' ? data.users || data : ensurePostsFormat(data);
   } catch (error) {
     console.error('Error fetching data:', error);
     return [];
@@ -281,9 +312,9 @@ function ensurePostsFormat(data: any): any[] {
   return [];
 }
 
-export async function FollowUser(userID: string) {
+export async function FollowUser(username: string) {
   try {
-    const response = await fetch(`http://localhost:8080/api/profile/follow/${userID}`, {
+    const response = await fetch(`http://localhost:8080/api/profile/follow/${username}`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -298,9 +329,9 @@ export async function FollowUser(userID: string) {
   }
 }
 
-export async function UnfollowUser(userID: string) {
+export async function UnfollowUser(username: string) {
   try {
-    const response = await fetch(`http://localhost:8080/api/profile/unfollow/${userID}`, {
+    const response = await fetch(`http://localhost:8080/api/profile/unfollow/${username}`, {
       method: 'DELETE',
       credentials: 'include',
     });
@@ -314,10 +345,9 @@ export async function UnfollowUser(userID: string) {
   }
 }
 
-
-export async function IsAlreadyFollowing(userID: string): Promise<boolean> {
+export async function IsAlreadyFollowing(username: string): Promise<boolean> {
   try {
-    const response = await fetch(`http://localhost:8080/api/profile/is-following/${userID}`, {
+    const response = await fetch(`http://localhost:8080/api/profile/is-following/${username}`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -424,7 +454,41 @@ export async function createPost(body: string): Promise<any> {
 
 export async function getPostsByUsername(username: string): Promise<any> {
   try {
-    const response = await fetch(`'http://localhost:8080/api/posts/user/${username}'`, {
+    const response = await fetch(`http://localhost:8080/api/posts/user/${username}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error('Failed to create post');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+}
+
+export async function getRepliesByUsername(username: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/replies/user/${username}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error('Failed to create post');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+}
+
+export async function getLikesByUsername(username: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/likes/user/${username}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -584,6 +648,42 @@ export async function quoteRepost(postId: string, quote: string): Promise<any> {
     };
   } catch (error) {
     console.error('Error quote reposting:', error);
+    throw error;
+  }
+}
+
+export async function getFollows(username: string, followType: string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/profile/${username}/${followType}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Failed to get ${followType} user`);
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    console.error(`Error to get ${followType} user:`, error);
+    return [];
+  }
+}
+
+export async function updateUserProfile(profileData: { nickname: string; bio?: string; location?: string; birthdate?: string }): Promise<any> {
+  try {
+    const response = await fetch('http://localhost:8080/api/profile/edit', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) throw new Error('Failed to update profile');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating profile:', error);
     throw error;
   }
 }

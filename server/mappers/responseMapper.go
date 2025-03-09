@@ -1,12 +1,16 @@
 package mappers
 
-import "main/models"
+import (
+	"main/models"
+	"time"
+)
 
 type Response struct {
-	ID            uint   `json:"id"`
-	Username      string `json:"username"`
-	Nickname      string `json:"nickname"`
-	FollowerCount uint   `json:"follower_count"`
+	ID            uint      `json:"id"`
+	Username      string    `json:"username"`
+	Nickname      string    `json:"nickname"`
+	FollowerCount uint      `json:"follower_count"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // MapUserToResponse converts ONLY ONE models.User to a Response.
@@ -16,6 +20,7 @@ func MapUserToResponse(u models.User) Response {
 		Nickname:      u.Nickname,
 		Username:      u.Username,
 		FollowerCount: u.FollowerCount,
+		CreatedAt:     u.CreatedAt,
 	}
 }
 

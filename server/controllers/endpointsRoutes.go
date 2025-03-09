@@ -56,6 +56,18 @@ var GetAllPostsEndpoint = models.Endpoint{
 	HandlerFunction: GetAllPostsHandler,
 }
 
+var GetAllRepliesEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/replies/user/:username",
+	HandlerFunction: GetAllRepliesHandler,
+}
+
+var PostsWLikesEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/likes/user/:username",
+	HandlerFunction: PostsWLikesHandler,
+}
+
 var CreatePostEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.InitialURLPosts + "/create",
@@ -68,7 +80,7 @@ var CreateRepostEndpoint = models.Endpoint{
 	HandlerFunction: CreateRepostHandler,
 }
 
-var GetAllPostsByUserIDEndpoint = models.Endpoint{
+var GetAllPostsByUsernameEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLPosts + "/user/:username",
 	HandlerFunction: GetPostsByUsernameHandler,
@@ -110,6 +122,12 @@ var SearchEndpoint = models.Endpoint{
 	HandlerFunction: SearchHandler,
 }
 
+var PrivateSearchEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPrivateSearch,
+	HandlerFunction: PrivateSearchHandler,
+}
+
 var ListConversationsEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLDms,
@@ -130,19 +148,19 @@ var SendDirectMessageEndpoint = models.Endpoint{
 
 var FollowUserEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLProfile + "/follow/:userid",
+	Path:            constants.InitialURLProfile + "/follow/:username",
 	HandlerFunction: FollowUserHandler,
 }
 
 var UnfollowUserEndpoint = models.Endpoint{
 	Method:          models.DELETE,
-	Path:            constants.InitialURLProfile + "/unfollow/:userid",
+	Path:            constants.InitialURLProfile + "/unfollow/:username",
 	HandlerFunction: UnfollowUserHandler,
 }
 
 var IsAlreadyFollowingEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLProfile + "/is-following/:userid",
+	Path:            constants.InitialURLProfile + "/is-following/:username",
 	HandlerFunction: IsAlreadyFollowingHandler,
 }
 
@@ -214,9 +232,8 @@ var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
 	ViewUserProfileEndpoint,
-	SearchEndpoint,
 	GetSpecificPostEndpoint,
-	GetAllPostsByUserIDEndpoint,
+	GetAllPostsByUsernameEndpoint,
 	GetAllPostsEndpoint,
 	ValidateTokenEndpoint,
 	ExpireTokenEndpoint,
@@ -224,6 +241,7 @@ var PublicEndpoints = []models.Endpoint{
 	CountRepostsEndpoint,
 	CountLikesEndpoint,
 	CountCommentsEndpoint,
+	SearchEndpoint,
 }
 
 var PrivateEndpoints = []models.Endpoint{
@@ -247,4 +265,7 @@ var PrivateEndpoints = []models.Endpoint{
 	CheckIfReposted,
 	CheckIfLiked,
 	CreateCommentEndpoint,
+	GetAllRepliesEndpoint,
+	PrivateSearchEndpoint,
+	PostsWLikesEndpoint,
 }

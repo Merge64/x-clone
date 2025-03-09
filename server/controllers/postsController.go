@@ -32,6 +32,46 @@ func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func GetAllRepliesHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Param("username")
+
+		rawPosts, err := user.GetAllRepliesByUsername(db, username)
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, listPosts) // <- Directly return the array
+	}
+}
+
+func PostsWLikesHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Param("username")
+
+		rawPosts, err := user.PostsWLikesByUsername(db, username)
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "No posts found."})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		listPosts := user.ProcessPosts(rawPosts)
+		c.JSON(http.StatusOK, listPosts) // <- Directly return the array
+	}
+}
+
 func GetPostsByUsernameHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Param("username")

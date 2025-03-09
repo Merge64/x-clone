@@ -56,6 +56,18 @@ var GetAllPostsEndpoint = models.Endpoint{
 	HandlerFunction: GetAllPostsHandler,
 }
 
+var GetAllRepliesEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/replies/user/:username",
+	HandlerFunction: GetAllRepliesHandler,
+}
+
+var PostsWLikesEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPosts + "/likes/user/:username",
+	HandlerFunction: PostsWLikesHandler,
+}
+
 var CreatePostEndpoint = models.Endpoint{
 	Method:          models.POST,
 	Path:            constants.InitialURLPosts + "/create",
@@ -108,6 +120,12 @@ var SearchEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLSearch,
 	HandlerFunction: SearchHandler,
+}
+
+var PrivateSearchEndpoint = models.Endpoint{
+	Method:          models.GET,
+	Path:            constants.InitialURLPrivateSearch,
+	HandlerFunction: PrivateSearchHandler,
 }
 
 var ListConversationsEndpoint = models.Endpoint{
@@ -214,7 +232,6 @@ var PublicEndpoints = []models.Endpoint{
 	UserSignUpEndpoint,
 	UserLoginEndpoint,
 	ViewUserProfileEndpoint,
-	SearchEndpoint,
 	GetSpecificPostEndpoint,
 	GetAllPostsByUserIDEndpoint,
 	GetAllPostsEndpoint,
@@ -224,6 +241,7 @@ var PublicEndpoints = []models.Endpoint{
 	CountRepostsEndpoint,
 	CountLikesEndpoint,
 	CountCommentsEndpoint,
+	SearchEndpoint,
 }
 
 var PrivateEndpoints = []models.Endpoint{
@@ -247,4 +265,7 @@ var PrivateEndpoints = []models.Endpoint{
 	CheckIfReposted,
 	CheckIfLiked,
 	CreateCommentEndpoint,
+	GetAllRepliesEndpoint,
+	PrivateSearchEndpoint,
+	PostsWLikesEndpoint,
 }

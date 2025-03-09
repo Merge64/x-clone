@@ -4,8 +4,9 @@ import { ArrowLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "./navbar/Navbar";
 import PostList from "../components/posts/PostList";
-import { getPostsByUsername, getUserInfo, getUserProfile } from "../utils/api";
+import { getLikesByUsername, getPostsByUsername, getRepliesByUsername, getUserInfo, getUserProfile } from "../utils/api";
 import { IsAlreadyFollowing, UnfollowUser, FollowUser } from "../utils/api";
+import { useNavigate } from "react-router-dom";
 
 function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -18,6 +19,47 @@ function ProfilePage() {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [currentUserInfo, setCurrentUserInfo] = useState<any>(null);
+  const navigate = useNavigate();
+
+  const fetchUserPosts = async () => {
+    if (!username) return;
+
+    setIsLoading(true);
+    setError("");
+    setNotFound(false);
+
+    try {
+      // Fetch user profile
+      const profileData = await getUserProfile(username);
+      setUserInfo({
+        username: profileData.username,
+        nickname: profileData.nickname,
+        location: profileData.location,
+        joinedAt: profileData.CreatedAt || new Date().toISOString(),
+        followersCount: profileData.followerCount,
+        followingCount: profileData.followingCount,
+      });
+
+      let fetchedPosts = [];
+
+      if (activeTab === "posts") {
+        fetchedPosts = await getPostsByUsername(username); // Fetch user’s posts
+      } else if (activeTab === "replies") {
+        fetchedPosts = await getRepliesByUsername(username);
+      } else if (activeTab === "likes") {
+        fetchedPosts = await getLikesByUsername(username);
+      }
+
+      setPosts(Array.isArray(fetchedPosts) ? fetchedPosts : []);
+    } catch (error) {
+      console.error(`Error fetching profile or posts for ${username}:`, error);
+      setNotFound(true);
+      setError(`The account @${username} doesn't exist`);
+      setPosts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -37,38 +79,6 @@ function ProfilePage() {
     };
     fetchUserInfo();
   }, [username]);
-
-  const fetchUserPosts = async () => {
-    if (!username) return;
-
-    setIsLoading(true);
-    setError("");
-    setNotFound(false);
-
-    try {
-      // Fetch user profile (now includes follower & following counts)
-      const profileData = await getUserProfile(username);
-
-      setUserInfo({
-        username: profileData.username,
-        nickname: profileData.nickname,
-        location: profileData.location,
-        joinedAt: profileData.CreatedAt || new Date().toISOString(),
-        followersCount: profileData.followerCount,
-        followingCount: profileData.followingCount,
-      });
-
-      const response = await getPostsByUsername(username);
-      setPosts(response);
-    } catch (profileError) {
-      console.error(`Error fetching profile for ${username}:`, profileError);
-      setNotFound(true);
-      setError(`The account @${username} doesn't exist`);
-      setPosts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleFollowAction = async () => {
     if (!username || !currentUserInfo) return;
@@ -94,17 +104,7 @@ function ProfilePage() {
 
   useEffect(() => {
     fetchUserPosts();
-  }, [username]);
-
-  if (isLoading) {
-    return (
-      <Navbar>
-        <div className="flex justify-center p-6">
-          <div className="w-8 h-8 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
-        </div>
-      </Navbar>
-    );
-  }
+  }, [activeTab, username]);
 
   if (notFound) {
     return (
@@ -145,12 +145,13 @@ function ProfilePage() {
     <Navbar>
       <div className="border-b border-gray-800">
         <div className="p-4 flex items-center">
-          <Link to="/home" className="mr-4">
+          <button onClick={() => navigate(-1)} className="mr-4">
             <ArrowLeft size={20} />
-          </Link>
+          </button>
+
           <div>
             <h1 className="text-xl font-bold">
-              {userInfo?.nickname}
+              {userInfo?.nickname || "Loading..."}
             </h1>
             <p className="text-gray-500 text-sm">{posts.length} posts</p>
           </div>
@@ -163,7 +164,7 @@ function ProfilePage() {
         <div className="flex justify-between">
           <div className="mt-[-48px]">
             <div className="w-24 h-24 rounded-full bg-black border-4 border-black flex items-center justify-center text-3xl font-bold">
-              {(userInfo.nickname || userInfo.username).charAt(0).toUpperCase() || "?"}
+              {(userInfo?.nickname || userInfo?.username || "?").charAt(0).toUpperCase()}
             </div>
           </div>
 
@@ -174,8 +175,8 @@ function ProfilePage() {
           ) : (
             <button
               className={`px-4 py-1.5 rounded-full font-bold transition-colors ${isFollowing
-                  ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
-                  : "bg-white text-black hover:bg-gray-200"
+                ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
+                : "bg-white text-black hover:bg-gray-200"
                 }`}
               onClick={handleFollowAction}
             >
@@ -186,7 +187,7 @@ function ProfilePage() {
 
         <div className="mt-4">
           <h2 className="text-xl font-bold">
-            {userInfo?.nickname || userInfo?.username}
+            {userInfo?.nickname || userInfo?.username || "Loading..."}
           </h2>
           <p className="text-gray-500">@{userInfo?.username}</p>
 
@@ -208,11 +209,21 @@ function ProfilePage() {
 
           <div className="flex mt-3">
             <div className="mr-4">
-              <span className="font-bold">{userInfo?.followingCount || 0}</span>{" "}
+              <span
+                className="font-bold cursor-pointer hover:underline"
+                onClick={() => navigate("./following")}
+              >
+                {userInfo?.followingCount || 0}
+              </span>{" "}
               <span className="text-gray-500">Following</span>
             </div>
             <div>
-              <span className="font-bold">{userInfo?.followersCount || 0}</span>{" "}
+              <span
+                className="font-bold cursor-pointer hover:underline"
+                onClick={() => navigate("./followers")}
+              >
+                {userInfo?.followersCount || 0}
+              </span>{" "}
               <span className="text-gray-500">Followers</span>
             </div>
           </div>
@@ -223,8 +234,8 @@ function ProfilePage() {
       <div className="flex border-b border-gray-800">
         <button
           className={`flex-1 py-4 text-center font-bold ${activeTab === "posts"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
+            ? "text-white border-b-4 border-blue-500"
+            : "text-gray-500 hover:bg-gray-900"
             }`}
           onClick={() => setActiveTab("posts")}
         >
@@ -232,26 +243,17 @@ function ProfilePage() {
         </button>
         <button
           className={`flex-1 py-4 text-center font-bold ${activeTab === "replies"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
+            ? "text-white border-b-4 border-blue-500"
+            : "text-gray-500 hover:bg-gray-900"
             }`}
           onClick={() => setActiveTab("replies")}
         >
           Replies
         </button>
         <button
-          className={`flex-1 py-4 text-center font-bold ${activeTab === "media"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
-            }`}
-          onClick={() => setActiveTab("media")}
-        >
-          Media
-        </button>
-        <button
           className={`flex-1 py-4 text-center font-bold ${activeTab === "likes"
-              ? "text-white border-b-4 border-blue-500"
-              : "text-gray-500 hover:bg-gray-900"
+            ? "text-white border-b-4 border-blue-500"
+            : "text-gray-500 hover:bg-gray-900"
             }`}
           onClick={() => setActiveTab("likes")}
         >
@@ -259,15 +261,7 @@ function ProfilePage() {
         </button>
       </div>
 
-      <PostList
-        posts={posts}
-        onRepost={fetchUserPosts}
-        emptyMessage={
-          activeTab === "posts"
-            ? `@${userInfo?.username} hasn't posted yet`
-            : `No ${activeTab} to display`
-        }
-      />
+      <PostList posts={posts} isLoading={isLoading} />
     </Navbar>
   );
 }

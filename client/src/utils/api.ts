@@ -261,10 +261,10 @@ export async function getAllPosts(): Promise<any[]> {
   }
 }
 
-export async function getSearchedPosts(keyword: string, orderBy: string) {
+export async function getSearchedPosts(keyword: string, filter: string) {
   let endpointURl = `http://localhost:8080/api/search?q=${keyword}`;
-  if (orderBy) {
-    endpointURl += `&f=${orderBy}`;
+  if (filter) {
+    endpointURl += `&f=${filter}`;
   }
   try {
     const response = await fetch(endpointURl, {
@@ -275,7 +275,28 @@ export async function getSearchedPosts(keyword: string, orderBy: string) {
 
     const data = await response.json();
 
-    return orderBy === 'user' ? data.users || data : ensurePostsFormat(data);
+    return filter === 'user' ? data.users || data : ensurePostsFormat(data);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return [];
+  }
+}
+
+export async function getPrivateSearchedPosts(keyword: string, filter: string) {
+  let endpointURl = `http://localhost:8080/api/private/search?q=${keyword}`;
+  if (filter) {
+    endpointURl += `&f=${filter}`;
+  }
+  try {
+    const response = await fetch(endpointURl, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch data');
+
+    const data = await response.json();
+
+    return filter === 'user' ? data.users || data : ensurePostsFormat(data);
   } catch (error) {
     console.error('Error fetching data:', error);
     return [];
@@ -433,6 +454,40 @@ export async function createPost(body: string): Promise<any> {
 export async function getPostsByUsername(username: string): Promise<any> {
   try {
     const response = await fetch(`http://localhost:8080/api/posts/user/${username}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error('Failed to create post');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+}
+
+export async function getRepliesByUsername(username: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/replies/user/${username}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error('Failed to create post');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+}
+
+export async function getLikesByUsername(username: string): Promise<any> {
+  try {
+    const response = await fetch(`http://localhost:8080/api/posts/likes/user/${username}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

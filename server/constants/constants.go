@@ -9,6 +9,7 @@ const InitialURLPosts = "/posts"
 const InitialURLProfile = "/profile"
 const InitialURLSearch = "/search"
 const InitialURLDms = "/messages"
+const InitialURLPrivateSearch = "/private/search"
 
 const ExpDate = 720
 const MaxCookieAge = 3600

@@ -9,6 +9,7 @@ import PostDetailPage from "./views/PostDetailPage";
 import UsernamePopup from "./components/feed/ChangeUsernamePopup";
 import ExplorePage from "./views/ExplorePage";
 import FollowsPage from "./views/follows/FollowsPage";
+import MessagesPage from "./views/MessagePage";
 
 function App() {
   return (
@@ -74,6 +75,15 @@ function App() {
           element={
             <AuthChecker>
               <PostDetailPage />
+            </AuthChecker>
+          }
+        />
+
+        <Route
+          path="/messages"
+          element={
+            <AuthChecker>
+              <MessagesPage />
             </AuthChecker>
           }
         />

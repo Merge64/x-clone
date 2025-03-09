@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
 	"main/constants"
@@ -216,10 +215,6 @@ func GetAllPostsByUsername(db *gorm.DB, username string) ([]models.Post, error) 
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
 	}
 
-	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("no posts found for user %s", username)
-	}
-
 	return posts, nil
 }
 
@@ -247,10 +242,6 @@ func GetAllRepliesByUsername(db *gorm.DB, username string) ([]models.Post, error
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
 	}
 
-	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("no posts found for user %s", username)
-	}
-
 	return posts, nil
 }
 
@@ -275,10 +266,6 @@ func PostsWLikesByUsername(db *gorm.DB, username string) ([]models.Post, error) 
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("internal server error: %w", result.Error)
-	}
-
-	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("no posts found for user %s", username)
 	}
 
 	return posts, nil
@@ -392,13 +379,8 @@ func GetSimplePostByID(db *gorm.DB, postID uint) (models.Post, error) {
 	return post, nil
 }
 
-func UpdateProfile(db *gorm.DB, user *models.User) error {
-	hashedPassword, hashedPasswordErr := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if hashedPasswordErr != nil {
-		return errors.New("failed to hash password")
-	}
-	user.Password = string(hashedPassword)
-	return db.Save(user).Error
+func UpdateProfile(db *gorm.DB, username string, user *models.User) error {
+	return db.Where("username = ?", username).Updates(user).Error
 }
 
 func GetFollowers(db *gorm.DB, username string) ([]mappers.Response, error) {
@@ -616,4 +598,25 @@ func IsFollowing(db *gorm.DB, followedUsername, currentUsername string) (bool, e
 	}
 
 	return true, nil
+}
+
+func GetMissingUserFields(db *gorm.DB, username string, user *models.User) {
+	var aux models.User
+	db.Where("username = ?", username).First(&aux)
+	user.Username = aux.Username
+	user.Mail = aux.Mail
+	user.FollowerCount = aux.FollowerCount
+	user.Password = aux.Password
+}
+
+func UpdateNicknamePosts(db *gorm.DB, username, nickname string) error {
+	rawPosts, errDB := GetAllPostsByUsername(db, username)
+	if errDB != nil {
+		return errDB
+	}
+	for _, post := range rawPosts {
+		post.Nickname = nickname
+		db.Updates(&post)
+	}
+	return nil
 }

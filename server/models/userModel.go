@@ -15,6 +15,7 @@ type User struct {
 	Mail          string         `json:"mail"`
 	Password      string         `json:"password"`
 	Location      *string        `json:"location"`
+	Bio           *string        `json:"bio"`
 	FollowerCount uint           `json:"follower_count"`
 }
 

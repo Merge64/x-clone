@@ -80,7 +80,7 @@ var CreateRepostEndpoint = models.Endpoint{
 	HandlerFunction: CreateRepostHandler,
 }
 
-var GetAllPostsByUserIDEndpoint = models.Endpoint{
+var GetAllPostsByUsernameEndpoint = models.Endpoint{
 	Method:          models.GET,
 	Path:            constants.InitialURLPosts + "/user/:username",
 	HandlerFunction: GetPostsByUsernameHandler,
@@ -233,7 +233,7 @@ var PublicEndpoints = []models.Endpoint{
 	UserLoginEndpoint,
 	ViewUserProfileEndpoint,
 	GetSpecificPostEndpoint,
-	GetAllPostsByUserIDEndpoint,
+	GetAllPostsByUsernameEndpoint,
 	GetAllPostsEndpoint,
 	ValidateTokenEndpoint,
 	ExpireTokenEndpoint,

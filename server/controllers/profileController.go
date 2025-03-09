@@ -32,6 +32,7 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 				"nickname":        u.Nickname,
 				"mail":            u.Mail,
 				"location":        u.Location,
+				"bio":             u.Bio,
 				"follower_count":  followerCount,
 				"following_count": followingCount,
 				"created_at":      u.CreatedAt, // Include the CreatedAt field
@@ -42,17 +43,26 @@ func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 
 func EditUserProfileHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, _ := c.Get("userID")
-		profileID, _ := userID.(uint)
+		usernameAux, _ := c.Get("username")
+		nicknameAux, _ := c.Get("nickname")
+		nickname, _ := nicknameAux.(string)
+		username, _ := usernameAux.(string)
 
 		var currentUser models.User
-		currentUser.ID = profileID
 		if decodeErr := c.ShouldBindJSON(&currentUser); decodeErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user data"})
 			return
 		}
 
-		if updateProfileErr := user.UpdateProfile(db, &currentUser); updateProfileErr != nil {
+		if currentUser.Nickname != nickname {
+			updateErr := user.UpdateNicknamePosts(db, username, currentUser.Nickname)
+			if updateErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": updateErr.Error()})
+				return
+			}
+		}
+
+		if updateProfileErr := user.UpdateProfile(db, username, &currentUser); updateProfileErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": updateProfileErr.Error()})
 			return
 		}
@@ -71,7 +81,6 @@ func GetFollowersProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		//listFollowers := user.EnlistUsers(followers)
 		followerCount := len(followers)
 
 		c.JSON(http.StatusOK, gin.H{

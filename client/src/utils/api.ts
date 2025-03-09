@@ -62,6 +62,7 @@ export async function getUserProfile(username: string): Promise<any> {
       username: data.profile.username,
       nickname: data.profile.nickname,
       location: data.profile.location || "",
+      bio: data.profile.bio || "",
       followerCount: data.profile.follower_count || 0, 
       followingCount: data.profile.following_count || 0, 
     };
@@ -664,5 +665,25 @@ export async function getFollows(username: string, followType: string) {
   } catch (error) {
     console.error(`Error to get ${followType} user:`, error);
     return [];
+  }
+}
+
+export async function updateUserProfile(profileData: { nickname: string; bio?: string; location?: string; birthdate?: string }): Promise<any> {
+  try {
+    const response = await fetch('http://localhost:8080/api/profile/edit', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) throw new Error('Failed to update profile');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    throw error;
   }
 }

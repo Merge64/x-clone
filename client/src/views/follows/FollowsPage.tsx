@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FollowCard } from "../../components/search/FollowCard";
 import { UserInfo } from "../../types/UserInter";
-import { getUserInfo, getFollows } from "../../utils/api";
+import { getFollows } from "../../utils/api";
 import Navbar from "../navbar/Navbar";
 import { useParams } from "react-router-dom";
 

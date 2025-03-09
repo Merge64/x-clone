@@ -100,7 +100,6 @@ func GetFollowingProfileHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		//listFollowing := user.EnlistUsers(following)
 		followingCount := len(following)
 
 		c.JSON(http.StatusOK, gin.H{

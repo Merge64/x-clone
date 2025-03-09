@@ -8,6 +8,7 @@ import ProfilePage from "./views/ProfilePage";
 import PostDetailPage from "./views/PostDetailPage";
 import UsernamePopup from "./components/feed/ChangeUsernamePopup";
 import ExplorePage from "./views/ExplorePage";
+import FollowsPage from "./views/follows/FollowsPage";
 
 function App() {
   return (
@@ -55,6 +56,15 @@ function App() {
           element={
             <AuthChecker>
               <ProfilePage />
+            </AuthChecker>
+          }
+        />
+
+        <Route
+          path="/:username/:typeFollowsURL"
+          element={
+            <AuthChecker>
+              <FollowsPage />
             </AuthChecker>
           }
         />

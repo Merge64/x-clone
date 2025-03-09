@@ -5,16 +5,17 @@ import { getUserInfo, getFollows } from "../../utils/api";
 import Navbar from "../navbar/Navbar";
 import { useParams } from "react-router-dom";
 
-interface FollowingResponse {
-  following_count: number;
+interface FollowsResponse {
+  following_count?: number;
+  follower_count?: number;
   users: UserInfo[];
 }
 
 function FollowsPage() {
-  const { typeFollowsURL } = useParams<{ typeFollowsURL: string }>();
+  const { username, typeFollowsURL } = useParams<{ username: string, typeFollowsURL: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [apiResponse, setFollowing] = useState<FollowingResponse | null>(null);
+  const [apiResponse, setFollows] = useState<FollowsResponse | null>(null);
 
   // Validate and get the correct type
   const getTypeFollows = () => {
@@ -24,15 +25,22 @@ function FollowsPage() {
     throw new Error("Invalid follow type");
   };
 
-  const fetchFollowing = async () => {
+  const getCount = () => {
+    if (!apiResponse) return 0;
+    return typeFollowsURL === "following" 
+      ? apiResponse.following_count || 0 
+      : apiResponse.follower_count || 0;
+  };
+
+  const fetchFollows = async () => {
     setIsLoading(true);
     setError("");
 
     try {
       const typeFollows = getTypeFollows();
-      const info = await getUserInfo();
-      const fetchedFollowing = await getFollows(info.username, typeFollows);
-      setFollowing(fetchedFollowing);
+      // const info = await getUserInfo();
+      const fetchedFollows = await getFollows(String(username), typeFollows);
+      setFollows(fetchedFollows);
     } catch (error) {
       console.error("Error fetching follows:", error);
       setError("Failed to load follows list. Please try again.");
@@ -42,7 +50,7 @@ function FollowsPage() {
   };
 
   useEffect(() => {
-    fetchFollowing();
+    fetchFollows();
   }, [typeFollowsURL]); // Re-fetch when the URL parameter changes
 
   // Handle invalid follow type
@@ -65,11 +73,9 @@ function FollowsPage() {
           <header className="sticky top-0 z-10 bg-black/80 backdrop-blur-sm border-b border-gray-800">
             <div className="px-4 py-3">
               <h1 className="text-xl font-bold capitalize">{typeFollowsURL}</h1>
-              {apiResponse && (
-                <p className="text-sm text-gray-400">
-                  {apiResponse.following_count} {typeFollowsURL}
-                </p>
-              )}
+              <p className="text-sm text-gray-400">
+                {getCount()} {typeFollowsURL}
+              </p>
             </div>
           </header>
 

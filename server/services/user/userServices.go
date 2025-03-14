@@ -518,8 +518,8 @@ func FindOrCreateConversation(db *gorm.DB, currentSenderUsername, currentReceive
 	}
 
 	// Fetch nicknames for an existing conversation
-	if err := updateConversationNicknames(db, &convo); err != nil {
-		return nil, err
+	if errUpdateNickname := updateConversationNicknames(db, &convo); errUpdateNickname != nil {
+		return nil, errUpdateNickname
 	}
 
 	return &convo, nil

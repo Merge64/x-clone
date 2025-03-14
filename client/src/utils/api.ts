@@ -641,7 +641,7 @@ export async function quoteRepost(postId: string, quote: string): Promise<any> {
     const data = await response.json();
     
     // Ensure the response includes user information
-    return {
+    return { 
       ...data,
       username: userInfo.username,
       nickname: userInfo.nickname
@@ -684,6 +684,58 @@ export async function updateUserProfile(profileData: { nickname: string; bio?: s
     return await response.json();
   } catch (error) {
     console.error('Error updating profile:', error);
+    throw error;
+  }
+}
+
+export async function listConversations() {
+  try {
+    const response = await fetch(`http://localhost:8080/api/messages`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Failed to get active conversations`);
+    const data = await response.json();
+    console.log(data)
+    return data;
+
+  } catch (error) {
+    console.error(`Error:`, error);
+    return [];
+  }
+}
+
+export async function getMessagesConversation(currUsername:string, secondUsername:string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/messages/${currUsername}/${secondUsername}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Failed to get active conversations`);
+    const data = await response.json();
+    console.log(data)
+    return data;
+
+  } catch (error) {
+    console.error(`Error:`, error);
+    return [];
+  }
+}
+
+export async function sendMessage(receiverUsername: string, message: string) {
+  try {
+    const response = await fetch(`http://localhost:8080/api/messages/dm/${receiverUsername}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) throw new Error('Failed to send message');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending message:', error);
     throw error;
   }
 }

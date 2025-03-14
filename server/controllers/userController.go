@@ -257,26 +257,32 @@ func sendMessage(c *gin.Context, senderStr string, receiverStr string, db *gorm.
 	}
 
 	if strings.TrimSpace(payload.Message) == constants.Empty {
-		return ErrorMessage{Message: gin.H{"error": "Message content cannot be empty"}, Status: http.StatusBadRequest}
+		return ErrorMessage{Message: gin.H{"error": "Message content cannot be empty"},
+			Status: http.StatusBadRequest}
 	}
 
 	if receiverStr == senderStr {
-		return ErrorMessage{Message: gin.H{"error": "You cannot send a message to yourself"}, Status: http.StatusBadRequest}
+		return ErrorMessage{Message: gin.H{"error": "You cannot send a message to yourself"},
+			Status: http.StatusBadRequest}
 	}
 
 	if err := user.SendMessage(db, senderStr, receiverStr, payload.Message); err != nil {
-		return ErrorMessage{Message: gin.H{"error": "Could not send message"}, Status: http.StatusInternalServerError}
+		return ErrorMessage{Message: gin.H{"error": "Could not send message"},
+			Status: http.StatusInternalServerError}
 	}
-	return ErrorMessage{Message: gin.H{"message": "Message sent successfully"}, Status: http.StatusOK}
+	return ErrorMessage{Message: gin.H{"message": "Message sent successfully"},
+		Status: http.StatusOK}
 }
 
-func preloadMessages(db *gorm.DB, senderUsername string, receiverUsername string, conversation *models.Conversation) error {
+func preloadMessages(db *gorm.DB, senderUsername string, receiverUsername string, conversation *models.
+	Conversation) error {
 	return db.Preload("Messages", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at asc") // Changed to ascending order
-	}).Where(
-		"(sender_username = ? AND receiver_username = ?) OR (sender_username = ? AND receiver_username = ?)",
-		senderUsername, receiverUsername, receiverUsername, senderUsername,
-	).First(conversation).Error
+	}).
+		Where("(sender_username = ? AND receiver_username = ?) OR "+
+			"(sender_username = ? AND receiver_username = ?)",
+			senderUsername, receiverUsername, receiverUsername, senderUsername,
+		).First(conversation).Error
 }
 
 func getConversation(db *gorm.DB, currentUsername string, conversations *[]models.Conversation) error {

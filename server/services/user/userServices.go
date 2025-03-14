@@ -503,7 +503,8 @@ func userExists(db *gorm.DB, userID uint) bool {
 	return true
 }
 
-func FindOrCreateConversation(db *gorm.DB, currentSenderUsername, currentReceiverUsername string) (*models.Conversation, error) {
+func FindOrCreateConversation(db *gorm.DB, currentSenderUsername, currentReceiverUsername string) (*models.
+	Conversation, error) {
 	var convo models.Conversation
 
 	// Try to find an existing conversation

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
@@ -94,83 +95,97 @@ func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
 
 func ListConversationsHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get current user from context
-		currentUserVal, exists := c.Get("username")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		currentUsername, err := getCurrentUsername(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
-		currentUsername, ok := currentUserVal.(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid username in context"})
-			return
-		}
-
-		// Get conversations with latest messages
-		var conversations []models.Conversation
-		err := getConversation(db, currentUsername, &conversations)
+		conversations, err := getConversations(db, currentUsername)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversations"})
 			return
 		}
 
-		// Sort conversations by latest message timestamp (descending)
-		sort.Slice(conversations, func(i, j int) bool {
-			var iTime, jTime time.Time
+		sortConversationsByLatestMessage(conversations)
 
-			// Get latest message time for conversation i
-			if len(conversations[i].Messages) > 0 {
-				iTime = conversations[i].Messages[0].CreatedAt
-			} else {
-				iTime = conversations[i].UpdatedAt // Fallback to conversation update time
-			}
-
-			// Get latest message time for conversation j
-			if len(conversations[j].Messages) > 0 {
-				jTime = conversations[j].Messages[0].CreatedAt
-			} else {
-				jTime = conversations[j].UpdatedAt
-			}
-
-			return iTime.After(jTime) // Descending order
-		})
-
-		// Format response
-		formattedConversations := []gin.H{}
-		for _, conv := range conversations {
-			// Get message details
-			lastMessage := ""
-			timestamp := ""
-			if len(conv.Messages) > 0 {
-				lastMessage = conv.Messages[0].Content
-				timestamp = conv.Messages[0].CreatedAt.Format("Jan 02 15:04")
-			}
-
-			// Determine other participant
-			var partnerUsername, partnerNickname string
-			if conv.SenderUsername == currentUsername {
-				partnerUsername = conv.ReceiverUsername
-				partnerNickname = conv.ReceiverNickname
-			} else {
-				partnerUsername = conv.SenderUsername
-				partnerNickname = conv.SenderNickname
-			}
-
-			formattedConversations = append(formattedConversations, gin.H{
-				"id":        conv.ID,
-				"username":  partnerUsername,
-				"nickname":  partnerNickname,
-				"content":   lastMessage,
-				"timestamp": timestamp,
-			})
-		}
+		formattedConversations := formatConversations(conversations, currentUsername)
 
 		c.JSON(http.StatusOK, formattedConversations)
 	}
 }
 
 // Aux
+
+func getCurrentUsername(c *gin.Context) (string, error) {
+	currentUserVal, exists := c.Get("username")
+	if !exists {
+		return "", errors.New("unauthorized")
+	}
+
+	currentUsername, ok := currentUserVal.(string)
+	if !ok {
+		return "", errors.New("invalid username in context")
+	}
+
+	return currentUsername, nil
+}
+
+func getConversations(db *gorm.DB, username string) ([]models.Conversation, error) {
+	var conversations []models.Conversation
+	err := getConversation(db, username, &conversations)
+	if err != nil {
+		return nil, err
+	}
+
+	return conversations, nil
+}
+
+func sortConversationsByLatestMessage(conversations []models.Conversation) {
+	sort.Slice(conversations, func(i, j int) bool {
+		iTime := getLatestMessageTime(conversations[i])
+		jTime := getLatestMessageTime(conversations[j])
+		return iTime.After(jTime)
+	})
+}
+
+func getLatestMessageTime(conv models.Conversation) time.Time {
+	if len(conv.Messages) > 0 {
+		return conv.Messages[0].CreatedAt
+	}
+	return conv.UpdatedAt
+}
+
+func formatConversations(conversations []models.Conversation, currentUsername string) []gin.H {
+	formattedConversations := []gin.H{}
+	for _, conv := range conversations {
+		lastMessage, timestamp := getLastMessageDetails(conv)
+		partnerUsername, partnerNickname := getPartnerDetails(conv, currentUsername)
+
+		formattedConversations = append(formattedConversations, gin.H{
+			"id":        conv.ID,
+			"username":  partnerUsername,
+			"nickname":  partnerNickname,
+			"content":   lastMessage,
+			"timestamp": timestamp,
+		})
+	}
+	return formattedConversations
+}
+
+func getLastMessageDetails(conv models.Conversation) (string, string) {
+	if len(conv.Messages) > 0 {
+		return conv.Messages[0].Content, conv.Messages[0].CreatedAt.Format("Jan 02 15:04")
+	}
+	return "", ""
+}
+
+func getPartnerDetails(conv models.Conversation, currentUsername string) (string, string) {
+	if conv.SenderUsername == currentUsername {
+		return conv.ReceiverUsername, conv.ReceiverNickname
+	}
+	return conv.SenderUsername, conv.SenderNickname
+}
 
 func checkUsernameExists(c *gin.Context, db *gorm.DB, sender string, receiver string) bool {
 	var senderCount, receiverCount int64
@@ -180,9 +195,8 @@ func checkUsernameExists(c *gin.Context, db *gorm.DB, sender string, receiver st
 	if senderCount == 0 || receiverCount == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Sender or receiver does not exist"})
 		return false
-	} else {
-		return true
 	}
+	return true
 }
 
 func toggleFollow(db *gorm.DB, c *gin.Context, isFollowing bool) {
@@ -279,14 +293,14 @@ func getConversation(db *gorm.DB, currentUsername string, conversations *[]model
 	// Then, for each conversation, fetch the **latest** message separately
 	for i := range *conversations {
 		var latestMessage models.Message
-		err := db.
+		errDB := db.
 			Where("conversation_id = ?", (*conversations)[i].ID).
 			Order("created_at DESC").
 			Limit(1).
 			Find(&latestMessage).Error
 
-		if err != nil {
-			return err
+		if errDB != nil {
+			return errDB
 		}
 
 		// If a message was found, add it to the conversation

@@ -507,57 +507,76 @@ func FindOrCreateConversation(db *gorm.DB, currentSenderUsername, currentReceive
 	var convo models.Conversation
 
 	// Try to find an existing conversation
-	err := db.Where(
-		"(sender_username = ? AND receiver_username = ?) OR (sender_username = ? AND receiver_username = ?)",
-		currentSenderUsername, currentReceiverUsername, currentReceiverUsername, currentSenderUsername,
-	).First(&convo).Error
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Fetch nicknames for both sender and receiver
-			var senderNickname, receiverNickname string
-
-			errSender := db.Model(&models.User{}).
-				Where("username = ?", currentSenderUsername).
-				Pluck("nickname", &senderNickname).Error
-			if errSender != nil {
-				return nil, errSender
-			}
-
-			errReceiver := db.Model(&models.User{}).
-				Where("username = ?", currentReceiverUsername).
-				Pluck("nickname", &receiverNickname).Error
-			if errReceiver != nil {
-				return nil, errReceiver
-			}
-
-			// Create a new conversation
-			convo = models.Conversation{
-				SenderUsername:   currentSenderUsername,
-				SenderNickname:   senderNickname, // Store sender's nickname
-				ReceiverUsername: currentReceiverUsername,
-				ReceiverNickname: receiverNickname, // Store receiver's nickname
-			}
-
-			if createErr := db.Create(&convo).Error; createErr != nil {
-				return nil, createErr
-			}
-
-			return &convo, nil
-		}
+	err := findExistingConversation(db, currentSenderUsername, currentReceiverUsername, &convo)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
-	// Fetch nicknames for an existing conversation
-	db.Model(&models.User{}).
-		Where("username = ?", convo.SenderUsername).
-		Pluck("nickname", &convo.SenderNickname)
+	// If conversation not found, create a new one
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return createNewConversation(db, currentSenderUsername, currentReceiverUsername)
+	}
 
-	db.Model(&models.User{}).
-		Where("username = ?", convo.ReceiverUsername).
-		Pluck("nickname", &convo.ReceiverNickname)
+	// Fetch nicknames for an existing conversation
+	if err := updateConversationNicknames(db, &convo); err != nil {
+		return nil, err
+	}
 
 	return &convo, nil
+}
+
+func findExistingConversation(db *gorm.DB, sender, receiver string, convo *models.Conversation) error {
+	return db.Where(
+		"(sender_username = ? AND receiver_username = ?) OR (sender_username = ? AND receiver_username = ?)",
+		sender, receiver, receiver, sender,
+	).First(convo).Error
+}
+
+func createNewConversation(db *gorm.DB, sender, receiver string) (*models.Conversation, error) {
+	senderNickname, err := getNickname(db, sender)
+	if err != nil {
+		return nil, err
+	}
+
+	receiverNickname, err := getNickname(db, receiver)
+	if err != nil {
+		return nil, err
+	}
+
+	convo := models.Conversation{
+		SenderUsername:   sender,
+		SenderNickname:   senderNickname,
+		ReceiverUsername: receiver,
+		ReceiverNickname: receiverNickname,
+	}
+
+	if errDB := db.Create(&convo).Error; errDB != nil {
+		return nil, errDB
+	}
+
+	return &convo, nil
+}
+
+func getNickname(db *gorm.DB, username string) (string, error) {
+	var nickname string
+	err := db.Model(&models.User{}).Where("username = ?", username).Pluck("nickname", &nickname).Error
+	return nickname, err
+}
+
+func updateConversationNicknames(db *gorm.DB, convo *models.Conversation) error {
+	if err := db.Model(&models.User{}).
+		Where("username = ?", convo.SenderUsername).
+		Pluck("nickname", &convo.SenderNickname).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&models.User{}).
+		Where("username = ?", convo.ReceiverUsername).
+		Pluck("nickname", &convo.ReceiverNickname).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func SendMessage(db *gorm.DB, currentSenderUsername, currentReceiverUsername string, content string) error {

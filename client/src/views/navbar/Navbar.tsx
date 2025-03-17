@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { X, Home, User, LogOut, Search, MessageCircle} from 'lucide-react';
+import { X, Home, User, LogOut, Bell, Search} from 'lucide-react';
 import { logout } from '../../utils/auth';
 import { useState, useEffect} from 'react';
 import { getUserInfo } from '../../utils/api';
@@ -57,13 +57,13 @@ function Navbar({ children }: NavbarProps) {
               </li>
               <li>
                 <Link
-                  to="/messages"
+                  to="/notifications"
                   className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
-                    location.pathname === "/messages" ? "font-bold" : ""
+                    location.pathname === "/notifications" ? "font-bold" : ""
                   }`}
                 >
-                  <MessageCircle size={24} className="mr-4" />
-                  <span className="text-xl">Messages</span>
+                  <Bell size={24} className="mr-4" />
+                  <span className="text-xl">Notifications</span>
                 </Link>
               </li>
               <li>

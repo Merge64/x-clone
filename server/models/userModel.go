@@ -27,16 +27,14 @@ type Follow struct {
 
 type Conversation struct {
 	gorm.Model
-	SenderUsername   string    `json:"sender_username"`
-	SenderNickname   string    `json:"sender_nickname"`
-	ReceiverUsername string    `json:"receiver_username"`
-	ReceiverNickname string    `json:"receiver_nickname"`
-	Messages         []Message `json:"messages"`
+	SenderID   uint      `json:"sender_id"`
+	ReceiverID uint      `json:"receiver_id"`
+	Messages   []Message `json:"messages"`
 }
 
 type Message struct {
 	gorm.Model
 	ConversationID uint   `json:"conversation_id" gorm:"index;not null"`
-	SenderUsername string `json:"sender_username" gorm:"index;not null"`
+	SenderID       uint   `json:"sender_id" gorm:"index;not null"`
 	Content        string `json:"content" gorm:"type:text;not null"`
 }

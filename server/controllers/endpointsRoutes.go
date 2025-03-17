@@ -136,13 +136,13 @@ var ListConversationsEndpoint = models.Endpoint{
 
 var GetConversationMessagesEndpoint = models.Endpoint{
 	Method:          models.GET,
-	Path:            constants.InitialURLDms + "/:receiverUsername/:senderUsername",
+	Path:            constants.InitialURLDms + "/:receiverID/:senderID",
 	HandlerFunction: GetMessagesForConversationHandler,
 }
 
 var SendDirectMessageEndpoint = models.Endpoint{
 	Method:          models.POST,
-	Path:            constants.InitialURLDms + "/dm/:rUsername",
+	Path:            constants.InitialURLDms + "/dm",
 	HandlerFunction: SendMessageHandler,
 }
 

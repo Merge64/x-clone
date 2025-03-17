@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
@@ -9,9 +8,8 @@ import (
 	"main/models"
 	"main/services/user"
 	"net/http"
-	"sort"
+	"strconv"
 	"strings"
-	"time"
 )
 
 func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {
@@ -28,33 +26,35 @@ func UnfollowUserHandler(db *gorm.DB) gin.HandlerFunc {
 
 func GetMessagesForConversationHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Retrieve the current username
-		currentUsernameAux, exists := c.Get("username")
+		currentUserVal, exists := c.Get("userID")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
-
-		// Ensure the currentUsername is a string
-		currentUsername, ok := currentUsernameAux.(string)
+		currentUserID, ok := currentUserVal.(uint)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid username in context"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
 			return
 		}
 
-		// Get sender and receiver usernames from URL parameters
-		senderUsername := c.Param("senderUsername")
-		receiverUsername := c.Param("receiverUsername")
+		receiverIDStr, senderIDStr := c.Param("receiverID"), c.Param("senderID")
+		receiverIDInt, errReciver := strconv.Atoi(receiverIDStr)
+		senderIDInt, errSender := strconv.Atoi(senderIDStr)
 
-		// Check if the current user is part of the conversation
-		if currentUsername != senderUsername && currentUsername != receiverUsername {
+		if errReciver != nil || errSender != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid receiver or sender ID"})
+			return
+		}
+		receiverID := uint(receiverIDInt)
+		senderID := uint(senderIDInt)
+
+		if currentUserID != receiverID && currentUserID != senderID {
 			c.JSON(http.StatusForbidden, gin.H{"error": "You are not a participant in this conversation"})
 			return
 		}
 
-		// Preload messages for the conversation
 		var conversation models.Conversation
-		if errDB := preloadMessages(db, senderUsername, receiverUsername, &conversation); errDB != nil {
+		if errDB := preloadMessages(db, senderID, receiverID, conversation); errDB != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
 			return
 		}
@@ -65,139 +65,48 @@ func GetMessagesForConversationHandler(db *gorm.DB) gin.HandlerFunc {
 
 func SendMessageHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		senderValAux, exists := c.Get("username")
+		senderVal, exists := c.Get("userID")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
-		senderValStr, ok := senderValAux.(string)
+		senderID, ok := senderVal.(uint)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid senderValStr in context"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
 			return
 		}
 
-		receiverValStr := c.Param("rUsername")
-		if receiverValStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Receiver username is required"})
-			return
-		}
-
-		if !checkUsernameExists(c, db, senderValStr, receiverValStr) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid sender or receiver"})
-			return
-		}
-
-		// Proceed with sending the message
-		errorMessage := sendMessage(c, senderValStr, receiverValStr, db)
+		errorMessage := sendMessage(c, senderID, db)
 		c.JSON(errorMessage.Status, errorMessage.Message)
 	}
 }
 
 func ListConversationsHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUsername, err := getCurrentUsername(c)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		currentUserVal, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		currentUserID, ok := currentUserVal.(uint)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid userID in context"})
 			return
 		}
 
-		conversations, err := getConversations(db, currentUsername)
+		var conversations []models.Conversation
+		err := getConversation(db, currentUserID, conversations)
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversations"})
 			return
 		}
 
-		sortConversationsByLatestMessage(conversations)
-
-		formattedConversations := formatConversations(conversations, currentUsername)
-
-		c.JSON(http.StatusOK, formattedConversations)
+		c.JSON(http.StatusOK, conversations)
 	}
 }
 
 // Aux
-
-func getCurrentUsername(c *gin.Context) (string, error) {
-	currentUserVal, exists := c.Get("username")
-	if !exists {
-		return "", errors.New("unauthorized")
-	}
-
-	currentUsername, ok := currentUserVal.(string)
-	if !ok {
-		return "", errors.New("invalid username in context")
-	}
-
-	return currentUsername, nil
-}
-
-func getConversations(db *gorm.DB, username string) ([]models.Conversation, error) {
-	var conversations []models.Conversation
-	err := getConversation(db, username, &conversations)
-	if err != nil {
-		return nil, err
-	}
-
-	return conversations, nil
-}
-
-func sortConversationsByLatestMessage(conversations []models.Conversation) {
-	sort.Slice(conversations, func(i, j int) bool {
-		iTime := getLatestMessageTime(conversations[i])
-		jTime := getLatestMessageTime(conversations[j])
-		return iTime.After(jTime)
-	})
-}
-
-func getLatestMessageTime(conv models.Conversation) time.Time {
-	if len(conv.Messages) > 0 {
-		return conv.Messages[0].CreatedAt
-	}
-	return conv.UpdatedAt
-}
-
-func formatConversations(conversations []models.Conversation, currentUsername string) []gin.H {
-	formattedConversations := []gin.H{}
-	for _, conv := range conversations {
-		lastMessage, timestamp := getLastMessageDetails(conv)
-		partnerUsername, partnerNickname := getPartnerDetails(conv, currentUsername)
-
-		formattedConversations = append(formattedConversations, gin.H{
-			"id":        conv.ID,
-			"username":  partnerUsername,
-			"nickname":  partnerNickname,
-			"content":   lastMessage,
-			"timestamp": timestamp,
-		})
-	}
-	return formattedConversations
-}
-
-func getLastMessageDetails(conv models.Conversation) (string, string) {
-	if len(conv.Messages) > 0 {
-		return conv.Messages[0].Content, conv.Messages[0].CreatedAt.Format("Jan 02 15:04")
-	}
-	return "", ""
-}
-
-func getPartnerDetails(conv models.Conversation, currentUsername string) (string, string) {
-	if conv.SenderUsername == currentUsername {
-		return conv.ReceiverUsername, conv.ReceiverNickname
-	}
-	return conv.SenderUsername, conv.SenderNickname
-}
-
-func checkUsernameExists(c *gin.Context, db *gorm.DB, sender string, receiver string) bool {
-	var senderCount, receiverCount int64
-	db.Model(&models.User{}).Where("username = ?", sender).Count(&senderCount)
-	db.Model(&models.User{}).Where("username = ?", receiver).Count(&receiverCount)
-
-	if senderCount == 0 || receiverCount == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Sender or receiver does not exist"})
-		return false
-	}
-	return true
-}
 
 func toggleFollow(db *gorm.DB, c *gin.Context, isFollowing bool) {
 	followingUsernameAux, _ := c.Get("username")
@@ -244,78 +153,52 @@ func toggleFollow(db *gorm.DB, c *gin.Context, isFollowing bool) {
 	c.JSON(http.StatusOK, gin.H{"message": successMessage})
 }
 
-func sendMessage(c *gin.Context, senderStr string, receiverStr string, db *gorm.DB) ErrorMessage {
+func sendMessage(c *gin.Context, senderID uint, db *gorm.DB) ErrorMessage {
 	var payload struct {
-		Message string `json:"message" binding:"required"`
+		ReceiverID uint   `json:"receiver_id" binding:"required"`
+		Message    string `json:"message" binding:"required"`
 	}
 
 	if err := c.ShouldBind(&payload); err != nil {
 		return ErrorMessage{
-			Message: gin.H{"error": "Missing message in request"},
+			Message: gin.H{"error": "Missing receiver_id or message in request"},
 			Status:  http.StatusBadRequest,
 		}
 	}
 
 	if strings.TrimSpace(payload.Message) == constants.Empty {
-		return ErrorMessage{Message: gin.H{"error": "Message content cannot be empty"},
-			Status: http.StatusBadRequest}
+		return ErrorMessage{Message: gin.H{"error": "Message content cannot be empty"}, Status: http.StatusBadRequest}
 	}
 
-	if receiverStr == senderStr {
-		return ErrorMessage{Message: gin.H{"error": "You cannot send a message to yourself"},
-			Status: http.StatusBadRequest}
+	if senderID == payload.ReceiverID {
+		return ErrorMessage{Message: gin.H{"error": "You cannot send a message to yourself"}, Status: http.StatusBadRequest}
 	}
 
-	if err := user.SendMessage(db, senderStr, receiverStr, payload.Message); err != nil {
-		return ErrorMessage{Message: gin.H{"error": "Could not send message"},
-			Status: http.StatusInternalServerError}
+	if err := user.SendMessage(db, senderID, payload.ReceiverID, payload.Message); err != nil {
+		return ErrorMessage{Message: gin.H{"error": "Could not send message"}, Status: http.StatusInternalServerError}
 	}
-	return ErrorMessage{Message: gin.H{"message": "Message sent successfully"},
-		Status: http.StatusOK}
+	return ErrorMessage{Message: gin.H{"message": "Message sent successfully"}, Status: http.StatusOK}
 }
 
-func preloadMessages(db *gorm.DB, senderUsername string, receiverUsername string, conversation *models.
-	Conversation) error {
+func preloadMessages(db *gorm.DB, senderID uint, receiverID uint, conversation models.Conversation) error {
 	return db.Preload("Messages", func(db *gorm.DB) *gorm.DB {
-		return db.Order("created_at asc") // Changed to ascending order
-	}).
-		Where("(sender_username = ? AND receiver_username = ?) OR "+
-			"(sender_username = ? AND receiver_username = ?)",
-			senderUsername, receiverUsername, receiverUsername, senderUsername,
-		).First(conversation).Error
+		return db.Order("created_at desc")
+	}).Where(
+		"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
+		senderID, receiverID, receiverID, senderID,
+	).First(&conversation).Error
 }
 
-func getConversation(db *gorm.DB, currentUsername string, conversations *[]models.Conversation) error {
-	// First, load conversations **without messages**
-	err := db.
-		Where("sender_username = ? OR receiver_username = ?", currentUsername, currentUsername).
-		Order("updated_at DESC").
-		Find(conversations).Error
-
-	if err != nil {
-		return err
-	}
-
-	// Then, for each conversation, fetch the **latest** message separately
-	for i := range *conversations {
-		var latestMessage models.Message
-		errDB := db.
-			Where("conversation_id = ?", (*conversations)[i].ID).
-			Order("created_at DESC").
-			Limit(1).
-			Find(&latestMessage).Error
-
-		if errDB != nil {
-			return errDB
-		}
-
-		// If a message was found, add it to the conversation
-		if latestMessage.ID != 0 {
-			(*conversations)[i].Messages = []models.Message{latestMessage}
-		}
-	}
-
-	return nil
+func getConversation(db *gorm.DB, currentUserID uint, conversations []models.Conversation) error {
+	return db.Model(&models.Conversation{}).
+		Joins("LEFT JOIN messages ON messages.conversation_id = conversations.id").
+		Where("conversations.sender_id = ? OR conversations.receiver_id = ?", currentUserID, currentUserID).
+		Group("conversations.id").
+		Order("COALESCE(MAX(messages.created_at), conversations.created_at) desc").
+		Preload("Messages", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at desc").Limit(1)
+		}).
+		Find(&conversations).Error
 }
 
 func GetUserInfoHandler(db *gorm.DB) gin.HandlerFunc {

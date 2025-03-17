@@ -1,6 +1,6 @@
 # X.com Clone
 
-[[ CURRENTLY IN DEVELOPMENT BY THE END OF MARCH A STABLE V1 WILL BE RELEASED ]]
+[[ CURRENTLY IN DEVELOPMENT, STABLE LOCAL V1 RELEASED ]]
 
 A clone of X.com built to enhance our understanding of web development. This project was created as part of our personal learning journey.
 
@@ -11,8 +11,8 @@ A clone of X.com built to enhance our understanding of web development. This pro
 - [Installation](#installation)
 - [Environment Variables Setup](#environment-variables-setup)
 - [Usage](#usage)
-- [Legal Disclaimer](#legal-disclaimer)
 - [How to use the app](#how-to-use-the-app)
+- [Legal Disclaimer](#legal-disclaimer)
 
 ## Overview
 This is a fully functional clone of **X.com**, designed to simulate key features of the platform, including user registration, transactions, account management, and other e-commerce functionalities. The goal of this project was to improve my understanding of front-end and back-end integration, database management, and web application security.
@@ -22,7 +22,7 @@ This is a fully functional clone of **X.com**, designed to simulate key features
 ![image](https://github.com/user-attachments/assets/b5bd0704-00ae-47fa-84c1-3730e0c94baa)
 
 ## Features
-- **User Authentication**: Registration, login, and password recovery.
+- **User Authentication**: Registration, login, JWT.
 - **User Interactions**: Posting, reposting, commenting, liking, and sending private messages (DMs).
 
 ## Technologies Used

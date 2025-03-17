@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/gorm"
-	"main/models"
+	"x-clone/server/models"
 )
 
 func getUserFromToken(db *gorm.DB, tokenString string) (*models.User, error) {

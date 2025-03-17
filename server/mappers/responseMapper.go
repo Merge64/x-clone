@@ -1,8 +1,8 @@
 package mappers
 
 import (
-	"main/models"
 	"time"
+	"x-clone/server/models"
 )
 
 type Response struct {

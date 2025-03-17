@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"main/mappers"
-	"main/models"
-	"main/services/user"
 	"net/http"
 	"strings"
+	"x-clone/server/mappers"
+	"x-clone/server/models"
+	"x-clone/server/services/user"
 )
 
 // TODO: Make this functional when searching with more spaces in between

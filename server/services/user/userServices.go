@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
-	"main/constants"
-	"main/mappers"
-	"main/models"
 	"regexp"
+	"x-clone/server/constants"
+	"x-clone/server/mappers"
+	"x-clone/server/models"
 )
 
 func FollowAccount(db *gorm.DB, followingUsername, followedUsername string) error {

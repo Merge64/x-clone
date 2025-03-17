@@ -6,12 +6,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"main/constants"
-	"main/models"
-	"main/services/user"
 	"net/http"
 	"os"
 	"time"
+	"x-clone/server/constants"
+	"x-clone/server/models"
+	"x-clone/server/services/user"
 )
 
 func SignUpHandler(db *gorm.DB) gin.HandlerFunc {

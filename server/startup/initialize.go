@@ -8,12 +8,12 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
-	middleware "main/authentication"
-	"main/constants"
-	"main/controllers"
-	"main/models"
 	"os"
 	"time"
+	middleware "x-clone/server/authentication"
+	"x-clone/server/constants"
+	"x-clone/server/controllers"
+	"x-clone/server/models"
 )
 
 func SetupRouter(db *gorm.DB) *gin.Engine {

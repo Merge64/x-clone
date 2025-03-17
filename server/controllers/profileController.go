@@ -3,9 +3,9 @@ package controllers
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"main/models"
-	"main/services/user"
 	"net/http"
+	"x-clone/server/models"
+	"x-clone/server/services/user"
 )
 
 func ViewUserProfileHandler(db *gorm.DB) gin.HandlerFunc {

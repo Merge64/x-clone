@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
-	"main/constants"
-	"main/mappers"
-	"main/models"
-	"main/services/user"
 	"net/http"
 	"strconv"
+	"x-clone/server/constants"
+	"x-clone/server/mappers"
+	"x-clone/server/models"
+	"x-clone/server/services/user"
 )
 
 func GetAllPostsHandler(db *gorm.DB) gin.HandlerFunc {

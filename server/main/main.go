@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"main/constants"
-	"main/startup"
 	"net/http"
 	"os"
+	"x-clone/server/constants"
+	"x-clone/server/startup"
 )
 
 func main() {

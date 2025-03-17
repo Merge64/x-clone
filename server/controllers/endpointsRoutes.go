@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"main/authentication"
-	"main/constants"
-	"main/models"
+	"x-clone/server/authentication"
+	"x-clone/server/constants"
+	"x-clone/server/models"
 )
 
 // TODO: User Endpoints - Add Nickname for user

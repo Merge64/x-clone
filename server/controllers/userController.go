@@ -5,13 +5,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
-	"main/constants"
-	"main/models"
-	"main/services/user"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+	"x-clone/server/constants"
+	"x-clone/server/models"
+	"x-clone/server/services/user"
 )
 
 func FollowUserHandler(db *gorm.DB) gin.HandlerFunc {

@@ -49,4 +49,4 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/willytonkas/${{env.BINARY_NAME}}:latest
+            ghcr.io/merge64/${{env.BINARY_NAME}}:latest

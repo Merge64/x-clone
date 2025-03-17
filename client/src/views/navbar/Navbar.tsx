@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { X, Home, User, LogOut, Search, MessageCircle} from 'lucide-react';
+import { X, Home, User, LogOut, Search, MessageCircle } from 'lucide-react';
 import { logout } from '../../utils/auth';
-import { useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import { getUserInfo } from '../../utils/api';
 
 
@@ -47,9 +47,8 @@ function Navbar({ children }: NavbarProps) {
               <li>
                 <Link
                   to="/home"
-                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
-                    location.pathname === "/home" ? "font-bold" : ""
-                  }`}
+                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${location.pathname === "/home" ? "font-bold" : ""
+                    }`}
                 >
                   <Home size={24} className="mr-4" />
                   <span className="text-xl">Home</span>
@@ -58,9 +57,8 @@ function Navbar({ children }: NavbarProps) {
               <li>
                 <Link
                   to="/messages"
-                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
-                    location.pathname === "/messages" ? "font-bold" : ""
-                  }`}
+                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${location.pathname === "/messages" ? "font-bold" : ""
+                    }`}
                 >
                   <MessageCircle size={24} className="mr-4" />
                   <span className="text-xl">Messages</span>
@@ -68,21 +66,22 @@ function Navbar({ children }: NavbarProps) {
               </li>
               <li>
                 <Link
-                    to={`/${currentUsername ?? ''}`}
-                    className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
-                    location.pathname.startsWith("/profile") ? "font-bold" : ""
-                  }`}
+                  to={`/${currentUsername ?? ''}`}
+                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${location.pathname.startsWith(`/${currentUsername}`) || location.pathname === "/profile"
+                      ? "font-bold"
+                      : ""
+                    }`}
                 >
                   <User size={24} className="mr-4" />
                   <span className="text-xl">Profile</span>
                 </Link>
               </li>
+
               <li>
                 <Link
                   to="/explore"
-                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${
-                    location.pathname.startsWith("/explore") ? "font-bold" : ""
-                  }`}
+                  className={`flex items-center p-2 rounded-full hover:bg-gray-800 ${location.pathname.startsWith("/explore") ? "font-bold" : ""
+                    }`}
                 >
                   <Search size={24} className="mr-4" />
                   <span className="text-xl">Explore</span>
@@ -100,7 +99,7 @@ function Navbar({ children }: NavbarProps) {
           </button>
         </div>
       </div>
-      
+
       {/* Main content */}
       <div className="ml-64 flex-1">
         <main className="max-w-2xl mx-auto">

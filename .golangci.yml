@@ -238,7 +238,7 @@ linters:
     - asciicheck # checks that your code does not contain non-ASCII identifiers
     - bidichk # checks for dangerous unicode character sequences
     - bodyclose # checks whether HTTP response body is closed successfully
-    - canonicalheader # checks whether net/http.Header uses canonical header
+    - canonicalheader # checks whether net/http/Header uses canonical header
     - copyloopvar # detects places where loop variables are copied (Go 1.22+)
     - cyclop # checks function and package cyclomatic complexity
     - dupl # tool for code clone detection
@@ -249,7 +249,7 @@ linters:
     - fatcontext # detects nested contexts in loops
     - funlen # tool for detection of long functions
     - gocheckcompilerdirectives # validates go compiler directive comments (//go:)
-#    - gochecknoglobals # checks that no global variables exist #TODO: enable after fixing issues
+    #    - gochecknoglobals # checks that no global variables exist #TODO: enable after fixing issues
     - gochecknoinits # checks that no init functions are present in Go code
     - gochecksumtype # checks exhaustiveness on Go "sum types"
     - gocognit # computes and checks the cognitive complexity of functions
@@ -260,7 +260,7 @@ linters:
     - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
-#    - gosec # inspects source code for security problems #TODO: enable after fixing issues
+    #    - gosec # inspects source code for security problems #TODO: enable after fixing issues
     - iface # checks the incorrect use of interfaces, helping developers avoid interface pollution
     - intrange # finds places where for loops could make use of an integer range
     - lll # reports long lines

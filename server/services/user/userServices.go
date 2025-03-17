@@ -503,39 +503,97 @@ func userExists(db *gorm.DB, userID uint) bool {
 	return true
 }
 
-func FindOrCreateConversation(db *gorm.DB, currentSenderID, currentReceiverID uint) (*models.Conversation, error) {
+func FindOrCreateConversation(db *gorm.DB, currentSenderUsername, currentReceiverUsername string) (*models.
+	Conversation, error) {
 	var convo models.Conversation
-	err := db.Where("sender_id = ? AND receiver_id = ?", currentSenderID, currentReceiverID).First(&convo).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			convo = models.Conversation{
-				SenderID:   currentSenderID,
-				ReceiverID: currentReceiverID,
-			}
-			if createErr := db.Create(&convo).Error; createErr != nil {
-				return nil, createErr
-			}
-			return &convo, nil
-		}
+
+	// Try to find an existing conversation
+	err := findExistingConversation(db, currentSenderUsername, currentReceiverUsername, &convo)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
+
+	// If conversation not found, create a new one
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return createNewConversation(db, currentSenderUsername, currentReceiverUsername)
+	}
+
+	// Fetch nicknames for an existing conversation
+	if errUpdateNickname := updateConversationNicknames(db, &convo); errUpdateNickname != nil {
+		return nil, errUpdateNickname
+	}
+
 	return &convo, nil
 }
 
-func SendMessage(db *gorm.DB, currentSenderID, currentReceiverID uint, content string) error {
-	if currentSenderID == 0 || currentReceiverID == 0 {
-		return errors.New("invalid sender or receiver ID")
+func findExistingConversation(db *gorm.DB, sender, receiver string, convo *models.Conversation) error {
+	return db.Where(
+		"(sender_username = ? AND receiver_username = ?) OR (sender_username = ? AND receiver_username = ?)",
+		sender, receiver, receiver, sender,
+	).First(convo).Error
+}
+
+func createNewConversation(db *gorm.DB, sender, receiver string) (*models.Conversation, error) {
+	senderNickname, err := getNickname(db, sender)
+	if err != nil {
+		return nil, err
+	}
+
+	receiverNickname, err := getNickname(db, receiver)
+	if err != nil {
+		return nil, err
+	}
+
+	convo := models.Conversation{
+		SenderUsername:   sender,
+		SenderNickname:   senderNickname,
+		ReceiverUsername: receiver,
+		ReceiverNickname: receiverNickname,
+	}
+
+	if errDB := db.Create(&convo).Error; errDB != nil {
+		return nil, errDB
+	}
+
+	return &convo, nil
+}
+
+func getNickname(db *gorm.DB, username string) (string, error) {
+	var nickname string
+	err := db.Model(&models.User{}).Where("username = ?", username).Pluck("nickname", &nickname).Error
+	return nickname, err
+}
+
+func updateConversationNicknames(db *gorm.DB, convo *models.Conversation) error {
+	if err := db.Model(&models.User{}).
+		Where("username = ?", convo.SenderUsername).
+		Pluck("nickname", &convo.SenderNickname).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&models.User{}).
+		Where("username = ?", convo.ReceiverUsername).
+		Pluck("nickname", &convo.ReceiverNickname).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SendMessage(db *gorm.DB, currentSenderUsername, currentReceiverUsername string, content string) error {
+	if currentSenderUsername == constants.Empty || currentReceiverUsername == constants.Empty {
+		return errors.New("invalid sender or receiver username")
 	}
 	if content == constants.Empty {
 		return errors.New("message content cannot be empty")
 	}
-	convo, err := FindOrCreateConversation(db, currentSenderID, currentReceiverID)
+	convo, err := FindOrCreateConversation(db, currentSenderUsername, currentReceiverUsername)
 	if err != nil {
 		return err
 	}
 	message := models.Message{
 		ConversationID: convo.ID,
-		SenderID:       currentSenderID,
+		SenderUsername: currentSenderUsername,
 		Content:        content,
 	}
 	return db.Create(&message).Error

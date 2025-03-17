@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import Navbar from "./navbar/Navbar";
 import PostList from "../components/posts/PostList";
 import EditProfileModal from "../components/editProfile/EditProfileModal";
+import MessageDialog from "../components/MessageDialog";
 import {
   getLikesByUsername,
   getPostsByUsername,
@@ -32,6 +33,7 @@ function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [currentUserInfo, setCurrentUserInfo] = useState<any>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   const fetchUserPosts = async () => {
@@ -204,25 +206,35 @@ function ProfilePage() {
               </div>
             </div>
 
-            {isCurrentUser ? (
-              <button
-                className="px-4 py-2 border border-gray-600 rounded-full font-bold hover:bg-gray-900"
-                onClick={() => setIsEditProfileOpen(true)}
-              >
-                Edit profile
-              </button>
-            ) : (
-              <button
-                className={`px-4 py-1.5 rounded-full font-bold transition-colors ${
-                  isFollowing
-                    ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
-                    : "bg-white text-black hover:bg-gray-200"
-                }`}
-                onClick={handleFollowAction}
-              >
-                {isFollowing ? "Unfollow" : "Follow"}
-              </button>
-            )}
+            <div className="flex gap-2">
+              {isCurrentUser ? (
+                <button
+                  className="px-4 py-2 border border-gray-600 rounded-full font-bold hover:bg-gray-900"
+                  onClick={() => setIsEditProfileOpen(true)}
+                >
+                  Edit profile
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="p-2 border border-gray-600 rounded-full hover:bg-gray-900"
+                    onClick={() => setIsMessageDialogOpen(true)}
+                  >
+                    <MessageCircle size={20} />
+                  </button>
+                  <button
+                    className={`px-4 py-1.5 rounded-full font-bold transition-colors ${
+                      isFollowing
+                        ? "bg-transparent border border-gray-600 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10"
+                        : "bg-white text-black hover:bg-gray-200"
+                    }`}
+                    onClick={handleFollowAction}
+                  >
+                    {isFollowing ? "Unfollow" : "Follow"}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="mt-4">
@@ -309,7 +321,6 @@ function ProfilePage() {
             Likes
           </button>
         </div>
-
         <PostList posts={posts} isLoading={isLoading} />
       </div>
 
@@ -322,6 +333,12 @@ function ProfilePage() {
           location: userInfo?.location || "",
         }}
         onSave={handleEditProfileSave}
+      />
+
+      <MessageDialog
+        isOpen={isMessageDialogOpen}
+        onClose={() => setIsMessageDialogOpen(false)}
+        recipient={username || ""}
       />
     </Navbar>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, Settings, ArrowLeft } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "./navbar/Navbar";
 import { getMessagesConversation, getUserInfo, listConversations, sendMessage } from "../utils/api";
 
@@ -29,13 +30,37 @@ interface ConversationResponse {
 }
 
 function MessagesPage() {
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [conversationList, setConversations] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Message | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [secondUser, setSecondUser] = useState<string | null>(null); // Ensure secondUser is a string
+  const [secondUser, setSecondUser] = useState<string | null>(null);
   const [conversationResponse, setConversationResponse] = useState<ConversationResponse | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const navigate = useNavigate();
+
+  // Handle new conversation from location state
+  useEffect(() => {
+    const newConversation = location.state?.openConversation;
+    if (newConversation && currentUser) {
+      const conversationObj = {
+        id: Date.now(),
+        CreatedAt: newConversation.timestamp,
+        UpdatedAt: newConversation.timestamp,
+        DeletedAt: null,
+        conversation_id: Date.now(),
+        sender_username: currentUser.username,
+        content: newConversation.content,
+        username: newConversation.username,
+        nickname: newConversation.username,
+        timestamp: newConversation.timestamp
+      };
+      
+      setSelectedConversation(conversationObj);
+      setSecondUser(newConversation.username);
+    }
+  }, [location.state, currentUser]);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -54,7 +79,37 @@ function MessagesPage() {
     try {
       const fetchedPosts = await listConversations();
       if (Array.isArray(fetchedPosts)) {
-        setConversations(fetchedPosts);
+        const newConversation = location.state?.openConversation;
+        
+        if (newConversation && !fetchedPosts.some(conv => conv.username === newConversation.username)) {
+          const newConversationObj = {
+            id: Date.now(),
+            CreatedAt: newConversation.timestamp,
+            UpdatedAt: newConversation.timestamp,
+            DeletedAt: null,
+            conversation_id: Date.now(),
+            sender_username: currentUser?.username || '',
+            content: newConversation.content,
+            username: newConversation.username,
+            nickname: newConversation.username,
+            timestamp: newConversation.timestamp
+          };
+          
+          setConversations([newConversationObj, ...fetchedPosts]);
+          setSelectedConversation(newConversationObj);
+          setSecondUser(newConversation.username);
+        } else {
+          setConversations(fetchedPosts);
+          
+          // If we have a new conversation in state, select it from existing conversations
+          if (newConversation) {
+            const existingConversation = fetchedPosts.find(conv => conv.username === newConversation.username);
+            if (existingConversation) {
+              setSelectedConversation(existingConversation);
+              setSecondUser(existingConversation.username);
+            }
+          }
+        }
       } else {
         console.error("Invalid response format:", fetchedPosts);
         setConversations([]);
@@ -68,12 +123,14 @@ function MessagesPage() {
   };
 
   useEffect(() => {
-    fetchConversationsList();
-  }, []);
+    if (currentUser) {
+      fetchConversationsList();
+    }
+  }, [currentUser]);
 
   const handleConversationClick = (conversation: Message) => {
     setSelectedConversation(conversation);
-    setSecondUser(conversation.username); // Set secondUser correctly
+    setSecondUser(conversation.username);
   };
 
   useEffect(() => {
@@ -91,20 +148,24 @@ function MessagesPage() {
       }
     };
 
-    fetchMessagesConversation();
+    if (secondUser) {
+      fetchMessagesConversation();
+    }
   }, [currentUser, secondUser]);
 
-  // Function to send a message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !secondUser) return;
 
     try {
-      await sendMessage(secondUser, newMessage); // Ensure correct username is used
-      setNewMessage(""); // Clear input after sending
+      await sendMessage(secondUser, newMessage);
+      setNewMessage("");
 
       // Refresh messages after sending
       const updatedConversation = await getMessagesConversation(currentUser.username, secondUser);
       setConversationResponse(updatedConversation);
+
+      // Refresh the conversation list
+      await fetchConversationsList();
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -121,7 +182,10 @@ function MessagesPage() {
               <button className="hover:bg-gray-800 p-2 rounded-full">
                 <Settings size={20} />
               </button>
-              <button className="hover:bg-gray-800 p-2 rounded-full">
+              <button
+                className="hover:bg-gray-800 p-2 rounded-full"
+                onClick={() => navigate(-1)} 
+              >
                 <ArrowLeft size={20} />
               </button>
             </div>
@@ -147,8 +211,10 @@ function MessagesPage() {
             ) : (
               conversationList.map((conversation) => (
                 <div
-                  key={conversation.id} // Unique key added here
-                  className="px-4 py-3 hover:bg-gray-900 cursor-pointer flex items-start gap-3"
+                  key={conversation.id}
+                  className={`px-4 py-3 hover:bg-gray-900 cursor-pointer flex items-start gap-3 ${
+                    selectedConversation?.username === conversation.username ? 'bg-gray-900' : ''
+                  }`}
                   onClick={() => handleConversationClick(conversation)}
                 >
                   <div className="w-10 h-10 text-sm rounded-full bg-gray-800 flex-shrink-0 flex items-center justify-center">
@@ -187,7 +253,7 @@ function MessagesPage() {
                 <div className="text-white space-y-2">
                   {conversationResponse?.messages?.map((message) => (
                     <div
-                      key={message.id} // Unique key added here
+                      key={message.id}
                       className={`bg-gray-800 p-3 rounded-lg w-fit max-w-xs ${
                         message.sender_username === currentUser?.username ? "ml-auto" : "mr-auto"
                       }`}
@@ -207,6 +273,12 @@ function MessagesPage() {
                     className="flex-1 bg-transparent border border-gray-800 rounded-2xl px-4 py-3 focus:outline-none focus:border-gray-700"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
                   />
                   <button
                     className="text-blue-400 px-4 py-2 rounded-full disabled:opacity-50"
